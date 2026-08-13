@@ -122,7 +122,7 @@ class WebServer(
                 }
                 // Check + download only. Does NOT install (won't interrupt playback).
                 post("/api/update/check") {
-                    UpdateChecker.checkAndDownload(context)
+                    UpdateChecker.checkAndDownload(this@WebServer.context)
                     val avail = UpdateState.available.value
                     call.respondJson(json.encodeToString(ApiResult(avail != null, UpdateState.lastMessage.value)))
                 }

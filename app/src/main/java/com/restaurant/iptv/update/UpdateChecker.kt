@@ -140,7 +140,7 @@ object UpdateChecker {
                 setRequestProperty("User-Agent", "MarhabaIPTV")
             }
         }
-        conn.inputStream.use { input -> out.outputStream.use { input.copyTo(it) } }
+        conn.inputStream.use { input -> out.outputStream().use { input.copyTo(it) } }
         conn.disconnect()
     }
 }
