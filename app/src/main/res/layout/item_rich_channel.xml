@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/row_bg"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="12dp">
+
+    <TextView
+        android:id="@+id/chNumber"
+        android:layout_width="46dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="#8B98A5"
+        android:textSize="15sp" />
+
+    <ImageView
+        android:id="@+id/chLogo"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="14dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="logo" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/chName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/chNow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="#9FB2C6"
+            android:textSize="13sp" />
+
+        <ProgressBar
+            android:id="@+id/chProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="6dp"
+            android:max="100"
+            android:progressTint="#2E7DFF" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/chStar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:text="☆"
+        android:textColor="#6B7683"
+        android:textSize="20sp" />
+</LinearLayout>

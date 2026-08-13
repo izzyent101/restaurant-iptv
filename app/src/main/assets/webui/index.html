@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Restaurant IPTV — Control</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/logo.png" class="brand-logo" alt="Marhaba" /> Marhaba IPTV</div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <a href="/dashboard" style="color:#2e7dff;text-decoration:none;font-weight:600">All TVs →</a>
+    <div id="statusPill" class="pill">…</div>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="statusCard">
+    <div class="row">
+      <div>
+        <div class="big" id="nowChannel">—</div>
+        <div class="muted" id="nowState">Loading…</div>
+      </div>
+      <div class="controls">
+        <button id="btnRetry" class="btn">Reconnect</button>
+        <button id="btnRefresh" class="btn">Refresh channels</button>
+        <button id="btnStop" class="btn danger">Stop</button>
+      </div>
+    </div>
+    <div class="muted small" id="diag"></div>
+  </section>
+
+  <section class="card">
+    <h2>Provider / Xtream login</h2>
+    <p class="muted small">Stored only on this TV. Leave the password blank when editing to keep the current one.</p>
+    <form id="providerForm" class="grid">
+      <label>Type
+        <select name="type" id="pType">
+          <option value="xtream">Xtream Codes</option>
+          <option value="m3u">M3U URL</option>
+        </select>
+      </label>
+      <label>Name <input name="name" id="pName" placeholder="My provider" /></label>
+      <div class="xtream-fields">
+        <label>Server URL <input name="server" id="pServer" placeholder="http://host:port" /></label>
+        <label>Username <input name="username" id="pUser" placeholder="username" /></label>
+        <label>Password <input name="password" id="pPass" type="password" placeholder="(unchanged)" /></label>
+      </div>
+      <div class="m3u-fields" style="display:none">
+        <label>M3U URL <input name="m3uUrl" id="pM3u" placeholder="http://.../playlist.m3u" /></label>
+      </div>
+      <label>EPG / XMLTV URL (optional) <input name="epgUrl" id="pEpg" placeholder="http://.../xmltv.php" /></label>
+      <div class="formActions">
+        <button type="submit" class="btn primary">Save &amp; load</button>
+        <button type="button" id="btnDeleteProvider" class="btn danger">Remove</button>
+      </div>
+    </form>
+    <div id="providerMsg" class="muted small"></div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <h2>Channels</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="btnRefreshEpg" class="btn">Refresh guide</button>
+        <input id="search" class="search" placeholder="Search channels…" />
+      </div>
+    </div>
+    <div id="groupFilter" class="chips"></div>
+    <div id="channelList" class="channels"></div>
+  </section>
+
+  <section class="card">
+    <h2>Groups</h2>
+    <p class="muted small">Hidden groups stay hidden across provider refreshes.</p>
+    <div id="groupManage" class="groups"></div>
+  </section>
+
+  <section class="card">
+    <h2>Security</h2>
+    <div class="muted small" id="securityLine">Checking…</div>
+    <form id="securityForm" class="grid" style="margin-top:10px">
+      <label>Control password (blank = open to anyone on the network)
+        <input name="password" id="secPass" type="password" placeholder="Set a password" />
+      </label>
+      <div class="formActions">
+        <button type="submit" class="btn primary">Save password</button>
+        <button type="button" id="btnClearPass" class="btn danger">Remove password</button>
+      </div>
+    </form>
+    <div id="securityMsg" class="muted small"></div>
+  </section>
+
+  <section class="card">
+    <h2>Software &amp; updates</h2>
+    <div class="muted small" id="versionLine">Version …</div>
+    <p class="muted small">Updates never install on their own. Check when you like; install only when you're ready (it briefly restarts the app, then resumes the last channel).</p>
+    <div class="formActions" style="margin-top:6px">
+      <button type="button" id="btnCheckUpdate" class="btn primary">Check for updates</button>
+      <button type="button" id="btnInstallUpdate" class="btn" style="display:none">Install now</button>
+    </div>
+    <div id="updateMsg" class="muted small" style="margin-top:8px"></div>
+    <details style="margin-top:12px">
+      <summary class="muted small" style="cursor:pointer">Advanced: self-host updates</summary>
+      <form id="updateForm" class="grid" style="margin-top:8px">
+        <label>Self-host manifest URL (leave blank to use GitHub)
+          <input name="manifestUrl" id="updManifest" placeholder="http://restaurant-pc:port/marhaba/version.json" />
+        </label>
+        <button type="submit" class="btn">Save</button>
+      </form>
+    </details>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

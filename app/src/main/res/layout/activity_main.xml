@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:keepScreenOn="true">
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/playerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:use_controller="false"
+        app:resize_mode="fit"
+        app:surface_type="surface_view" />
+
+    <!-- No-provider / status hint -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="24dp"
+        android:background="#B3000000"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Channel info bar (shown briefly on channel change) -->
+    <LinearLayout
+        android:id="@+id/infoBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#CC0E1116"
+        android:paddingHorizontal="28dp"
+        android:paddingVertical="18dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/infoLogo"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="logo" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="18dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/infoTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/infoNow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#CFE3FF"
+                android:textSize="15sp" />
+
+            <ProgressBar
+                android:id="@+id/infoProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_marginTop="8dp"
+                android:max="100"
+                android:progressTint="#2E7DFF" />
+
+            <TextView
+                android:id="@+id/infoNext"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#8B98A5"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Full browser: category sidebar + channel list -->
+    <LinearLayout
+        android:id="@+id/browserPanel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:background="#F00B0E13"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="320dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#12161C">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp"
+                android:text="Categories"
+                android:textColor="#8B98A5"
+                android:textSize="13sp"
+                android:textAllCaps="true" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/categoryList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:paddingBottom="16dp"
+                android:clipToPadding="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/channelHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp"
+                android:text="Channels"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/channelList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:paddingHorizontal="12dp"
+                android:paddingBottom="20dp"
+                android:clipToPadding="false" />
+        </LinearLayout>
+
+        <!-- EPG panel for the focused channel -->
+        <LinearLayout
+            android:id="@+id/epgPanel"
+            android:layout_width="420dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#12161C"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/epgHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="18dp"
+                android:text="Guide"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/epgList"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:paddingBottom="16dp"
+                android:clipToPadding="false" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
