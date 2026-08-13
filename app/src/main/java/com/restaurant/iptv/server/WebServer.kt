@@ -6,6 +6,7 @@ import com.restaurant.iptv.BuildConfig
 import com.restaurant.iptv.data.Prefs
 import com.restaurant.iptv.data.Repository
 import com.restaurant.iptv.data.entity.ProviderEntity
+import com.restaurant.iptv.epg.EpgStore
 import com.restaurant.iptv.player.PlaybackCommands
 import com.restaurant.iptv.player.PlaybackState
 import com.restaurant.iptv.update.UpdateChecker
@@ -14,6 +15,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCallPipeline
 import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
@@ -21,7 +23,9 @@ import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.request.httpMethod
 import io.ktor.server.request.receiveParameters
+import io.ktor.server.request.uri
 import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
@@ -53,10 +57,29 @@ class WebServer(
             install(CORS) {
                 anyHost()
                 allowHeader(HttpHeaders.ContentType)
+                allowHeader("X-Access-Key")
                 allowMethod(HttpMethod.Get)
                 allowMethod(HttpMethod.Post)
                 allowMethod(HttpMethod.Delete)
                 allowNonSimpleContentTypes = true
+            }
+
+            // Password gate: if a control password is set, every /api/* call
+            // (except the status probe) must carry the matching X-Access-Key.
+            // Static pages stay open so the login prompt can load.
+            intercept(ApplicationCallPipeline.Plugins) {
+                if (call.request.httpMethod == HttpMethod.Options) return@intercept
+                val path = call.request.uri.substringBefore('?')
+                if (path.startsWith("/api/") && path != "/api/security/status") {
+                    val key = prefs.accessKey()
+                    if (key.isNotEmpty() && call.request.headers["X-Access-Key"] != key) {
+                        call.respondText(
+                            json.encodeToString(ApiResult(false, "unauthorized")),
+                            ContentType.Application.Json, HttpStatusCode.Unauthorized
+                        )
+                        finish()
+                    }
+                }
             }
             install(StatusPages) {
                 exception<Throwable> { call, cause ->
@@ -92,6 +115,18 @@ class WebServer(
                     val address = call.receiveParameters()["address"]?.trim().orEmpty()
                     if (address.isNotEmpty()) repo.removeTv(address)
                     call.respondJson(json.encodeToString(ApiResult(true)))
+                }
+
+                // --- Security (control-panel password) ---
+                get("/api/security/status") {
+                    call.respondJson("{\"protected\":${prefs.accessKey().isNotEmpty()}}")
+                }
+                post("/api/security/password") {
+                    // Reachable when no password is set (open) or with the current
+                    // password (enforced by the gate above). Empty clears protection.
+                    val newKey = call.receiveParameters()["password"]?.trim().orEmpty()
+                    prefs.setAccessKey(newKey)
+                    call.respondJson(json.encodeToString(ApiResult(true, if (newKey.isEmpty()) "Password cleared" else "Password set")))
                 }
 
                 // --- Auto-update ---
@@ -162,10 +197,32 @@ class WebServer(
 
                 get("/api/channels") {
                     val prov = repo.getActiveProvider()
-                    val list = if (prov == null) emptyList() else repo.getVisibleChannels(prov.id).map {
-                        ChannelDto(it.id, it.name, it.groupTitle, it.number, it.logoUrl)
+                    val list = if (prov == null) emptyList() else {
+                        val favs = repo.getFavorites(prov.id)
+                        repo.getVisibleChannels(prov.id).map {
+                            val (now, next) = EpgStore.nowNext(prov.id, it.epgChannelId)
+                            ChannelDto(
+                                it.id, it.name, it.groupTitle, it.number, it.logoUrl,
+                                favorite = favs.contains(it.streamKey),
+                                epgNow = now?.title, epgNext = next?.title
+                            )
+                        }
                     }
                     call.respondJson(json.encodeToString(list))
+                }
+                post("/api/favorite") {
+                    val prov = repo.getActiveProvider()
+                    val id = call.receiveParameters()["channelId"]?.toLongOrNull()
+                    if (prov == null || id == null) return@post call.respondJson(json.encodeToString(ApiResult(false, "missing channel")))
+                    val ch = repo.getChannel(id) ?: return@post call.respondJson(json.encodeToString(ApiResult(false, "not found")))
+                    val nowFav = repo.toggleFavorite(prov.id, ch.streamKey)
+                    call.respondJson(json.encodeToString(ApiResult(true, if (nowFav) "added" else "removed")))
+                }
+                post("/api/epg/refresh") {
+                    val prov = repo.getActiveProvider()
+                        ?: return@post call.respondJson(json.encodeToString(ApiResult(false, "no provider")))
+                    val ok = repo.refreshEpg(prov.id)
+                    call.respondJson(json.encodeToString(ApiResult(ok, if (ok) "EPG loaded" else "No EPG available")))
                 }
 
                 get("/api/groups") {

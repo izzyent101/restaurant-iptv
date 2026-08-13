@@ -8,12 +8,23 @@ let tvs = [];                 // [{name, address}]
 const channelCache = {};      // address -> [channels]
 const cardEls = {};           // address -> card element
 
+// Shared control password (same on all TVs). Sent to every TV as X-Access-Key.
+function ak() { return sessionStorage.getItem('ak') || ''; }
+function promptKey() {
+  const pw = window.prompt('A TV is password-protected. Enter the control password (must match on all TVs):');
+  if (pw != null) sessionStorage.setItem('ak', pw);
+}
+
 function form(data) {
   const body = new URLSearchParams();
   Object.keys(data).forEach((k) => { if (data[k] != null) body.append(k, data[k]); });
-  return { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body };
+  return { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Access-Key': ak() }, body };
 }
-async function jget(url) { const r = await fetch(url, { cache: 'no-store' }); return r.json(); }
+async function jget(url) {
+  let r = await fetch(url, { cache: 'no-store', headers: { 'X-Access-Key': ak() } });
+  if (r.status === 401) { promptKey(); r = await fetch(url, { cache: 'no-store', headers: { 'X-Access-Key': ak() } }); }
+  return r.json();
+}
 function base(tv) { return 'http://' + tv.address; }
 
 // ---------- TV list ----------
@@ -89,11 +100,11 @@ function buildCard(tv) {
     await fetch('/api/tvs/remove', form({ address: tv.address }));
     await loadTvs();
   };
-  card.querySelector('.act-reconnect').onclick = () => fetch(base(tv) + '/api/retry', { method: 'POST' }).catch(() => {});
-  card.querySelector('.act-stop').onclick = () => fetch(base(tv) + '/api/stop', { method: 'POST' }).catch(() => {});
+  card.querySelector('.act-reconnect').onclick = () => fetch(base(tv) + '/api/retry', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {});
+  card.querySelector('.act-stop').onclick = () => fetch(base(tv) + '/api/stop', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {});
   card.querySelector('.act-refresh').onclick = async (e) => {
     e.target.textContent = '…';
-    await fetch(base(tv) + '/api/refresh', { method: 'POST' }).catch(() => {});
+    await fetch(base(tv) + '/api/refresh', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {});
     delete channelCache[tv.address];
     e.target.textContent = 'Refresh';
   };
@@ -247,8 +258,8 @@ async function bulkPlay(targets) {
 }
 $('#bulkPlayAll').onclick = () => bulkPlay(tvs);
 $('#bulkPlaySel').onclick = () => bulkPlay(selectedTvs());
-$('#bulkStop').onclick = () => { tvs.forEach((tv) => fetch(base(tv) + '/api/stop', { method: 'POST' }).catch(() => {})); };
-$('#bulkReconnect').onclick = () => { tvs.forEach((tv) => fetch(base(tv) + '/api/retry', { method: 'POST' }).catch(() => {})); };
+$('#bulkStop').onclick = () => { tvs.forEach((tv) => fetch(base(tv) + '/api/stop', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {})); };
+$('#bulkReconnect').onclick = () => { tvs.forEach((tv) => fetch(base(tv) + '/api/retry', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {})); };
 
 // ---------- Boot ----------
 async function init() {

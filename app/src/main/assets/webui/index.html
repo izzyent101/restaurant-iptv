@@ -62,7 +62,10 @@
   <section class="card">
     <div class="row">
       <h2>Channels</h2>
-      <input id="search" class="search" placeholder="Search channels…" />
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="btnRefreshEpg" class="btn">Refresh guide</button>
+        <input id="search" class="search" placeholder="Search channels…" />
+      </div>
     </div>
     <div id="groupFilter" class="chips"></div>
     <div id="channelList" class="channels"></div>
@@ -72,6 +75,21 @@
     <h2>Groups</h2>
     <p class="muted small">Hidden groups stay hidden across provider refreshes.</p>
     <div id="groupManage" class="groups"></div>
+  </section>
+
+  <section class="card">
+    <h2>Security</h2>
+    <div class="muted small" id="securityLine">Checking…</div>
+    <form id="securityForm" class="grid" style="margin-top:10px">
+      <label>Control password (blank = open to anyone on the network)
+        <input name="password" id="secPass" type="password" placeholder="Set a password" />
+      </label>
+      <div class="formActions">
+        <button type="submit" class="btn primary">Save password</button>
+        <button type="button" id="btnClearPass" class="btn danger">Remove password</button>
+      </div>
+    </form>
+    <div id="securityMsg" class="muted small"></div>
   </section>
 
   <section class="card">

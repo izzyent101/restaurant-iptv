@@ -3,10 +3,21 @@
 const $ = (s) => document.querySelector(s);
 let allChannels = [];
 let activeGroup = null;
+let favoritesOnly = false;
 let currentChannelId = null;
 
 async function api(path, opts) {
-  const res = await fetch(path, opts);
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers || {}, { 'X-Access-Key': sessionStorage.getItem('ak') || '' });
+  let res = await fetch(path, opts);
+  if (res.status === 401) {
+    const pw = window.prompt('This TV is password-protected. Enter the control password:');
+    if (pw != null) {
+      sessionStorage.setItem('ak', pw);
+      opts.headers['X-Access-Key'] = pw;
+      res = await fetch(path, opts);
+    }
+  }
   const text = await res.text();
   try { return JSON.parse(text); } catch (e) { return text; }
 }
@@ -85,11 +96,17 @@ function renderGroups() {
   box.innerHTML = '';
   const mkChip = (label, val) => {
     const el = document.createElement('span');
-    el.className = 'chip' + ((activeGroup === val) ? ' active' : '');
+    el.className = 'chip' + ((!favoritesOnly && activeGroup === val) ? ' active' : '');
     el.textContent = label;
-    el.onclick = () => { activeGroup = val; renderGroups(); renderChannels(); };
+    el.onclick = () => { favoritesOnly = false; activeGroup = val; renderGroups(); renderChannels(); };
     return el;
   };
+  // Favorites chip first
+  const fav = document.createElement('span');
+  fav.className = 'chip' + (favoritesOnly ? ' active' : '');
+  fav.textContent = '★ Favorites';
+  fav.onclick = () => { favoritesOnly = true; renderGroups(); renderChannels(); };
+  box.appendChild(fav);
   box.appendChild(mkChip('All', null));
   groups.forEach((g) => box.appendChild(mkChip(g, g)));
 }
@@ -99,19 +116,38 @@ function renderChannels() {
   const list = $('#channelList');
   list.innerHTML = '';
   allChannels
-    .filter((c) => (!activeGroup || c.group === activeGroup))
+    .filter((c) => (favoritesOnly ? c.favorite : (!activeGroup || c.group === activeGroup)))
     .filter((c) => (!q || c.name.toLowerCase().includes(q)))
     .slice(0, 800)
     .forEach((c) => {
       const el = document.createElement('div');
       el.className = 'channel' + (c.id === currentChannelId ? ' playing' : '');
       el.dataset.id = c.id;
-      el.innerHTML = '<div><div class="cname"></div><div class="cgroup"></div></div>';
+      el.innerHTML =
+        '<div class="ch-left">' +
+        (c.logo ? '<img class="ch-logo" referrerpolicy="no-referrer" />' : '<div class="ch-logo ch-logo-ph"></div>') +
+        '<div class="ch-meta"><div class="cname"></div><div class="cgroup"></div><div class="cepg muted small"></div></div>' +
+        '</div>' +
+        '<button class="star">' + (c.favorite ? '★' : '☆') + '</button>';
+      if (c.logo) { const im = el.querySelector('.ch-logo'); im.src = c.logo; im.onerror = () => { im.style.visibility = 'hidden'; }; }
       el.querySelector('.cname').textContent = c.name;
       el.querySelector('.cgroup').textContent = c.group;
+      const epg = el.querySelector('.cepg');
+      if (c.epgNow) epg.textContent = 'Now: ' + c.epgNow + (c.epgNext ? '  ·  Next: ' + c.epgNext : '');
+      const star = el.querySelector('.star');
+      if (c.favorite) star.classList.add('on');
+      star.onclick = (e) => { e.stopPropagation(); toggleFavorite(c, star); };
       el.onclick = () => play(c.id);
       list.appendChild(el);
     });
+}
+
+async function toggleFavorite(c, starEl) {
+  const res = await api('/api/favorite', form({ channelId: c.id }));
+  c.favorite = (res && res.message === 'added');
+  starEl.textContent = c.favorite ? '★' : '☆';
+  starEl.classList.toggle('on', c.favorite);
+  if (favoritesOnly && !c.favorite) renderChannels();
 }
 
 function markPlaying() {
@@ -182,6 +218,14 @@ function wire() {
   $('#search').oninput = renderChannels;
   $('#pType').onchange = toggleProviderFields;
 
+  $('#btnRefreshEpg').onclick = async () => {
+    const b = $('#btnRefreshEpg'); b.textContent = 'Loading guide…';
+    const r = await api('/api/epg/refresh', { method: 'POST' });
+    await loadChannels();
+    b.textContent = 'Refresh guide';
+    if (r && r.message) $('#providerMsg').textContent = r.message;
+  };
+
   $('#providerForm').onsubmit = async (e) => {
     e.preventDefault();
     $('#providerMsg').textContent = 'Connecting…';
@@ -236,9 +280,40 @@ function wireUpdates() {
   };
 }
 
+// ---------- Security ----------
+async function loadSecurity() {
+  try {
+    const s = await fetch('/api/security/status').then((r) => r.json());
+    $('#securityLine').textContent = s.protected
+      ? 'Protected — a password is required to control this TV.'
+      : 'No password set — anyone on the network can control this TV.';
+  } catch (e) {}
+}
+function wireSecurity() {
+  $('#securityForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const pw = $('#secPass').value;
+    $('#securityMsg').textContent = 'Saving…';
+    const res = await api('/api/security/password', form({ password: pw }));
+    if (pw) sessionStorage.setItem('ak', pw);
+    $('#secPass').value = '';
+    $('#securityMsg').textContent = (res && res.message) || 'Saved.';
+    await loadSecurity();
+  };
+  $('#btnClearPass').onclick = async () => {
+    if (!confirm('Remove the password? Anyone on the network will then be able to control this TV.')) return;
+    const res = await api('/api/security/password', form({ password: '' }));
+    sessionStorage.removeItem('ak');
+    $('#securityMsg').textContent = (res && res.message) || 'Removed.';
+    await loadSecurity();
+  };
+}
+
 async function init() {
   wire();
   wireUpdates();
+  wireSecurity();
+  await loadSecurity();
   await loadProvider();
   await loadChannels();
   await loadGroupManage();

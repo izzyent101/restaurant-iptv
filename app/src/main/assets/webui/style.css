@@ -69,6 +69,12 @@ input, select {
 .channel .cname { font-weight: 600; }
 .channel .cgroup { font-size: 11px; color: var(--muted); }
 .channel.playing { border-color: var(--ok); }
+.ch-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.ch-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; background: #0d1117; flex: none; }
+.ch-meta { min-width: 0; }
+.cepg { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.star { background: none; border: none; color: #6b7683; font-size: 18px; cursor: pointer; flex: none; padding: 0 4px; }
+.star.on { color: #e3b341; }
 .groups { display: grid; gap: 6px; max-height: 300px; overflow: auto; }
 .groupItem { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
 .groupItem.hidden { opacity: .5; }

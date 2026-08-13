@@ -39,7 +39,10 @@ data class ChannelDto(
     val name: String,
     val group: String,
     val number: Int,
-    val logo: String? = null
+    val logo: String? = null,
+    val favorite: Boolean = false,
+    val epgNow: String? = null,
+    val epgNext: String? = null
 )
 
 @Serializable

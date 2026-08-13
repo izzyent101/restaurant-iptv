@@ -82,6 +82,10 @@ class PlaybackService : Service(), PlaybackCommands {
         startWatchdog()
 
         scope.launch { resumeLastOrIdle() }
+        // Load EPG for the active provider in the background on startup.
+        scope.launch {
+            repo.getActiveProvider()?.let { runCatching { repo.refreshEpg(it.id) } }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -185,6 +189,7 @@ class PlaybackService : Service(), PlaybackCommands {
             val prov = repo.getActiveProvider() ?: return@launch
             repo.refreshProvider(prov.id)
             resumeLastOrIdle()
+            launch { runCatching { repo.refreshEpg(prov.id) } }
         }
     }
 

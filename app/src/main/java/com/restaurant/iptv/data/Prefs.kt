@@ -24,6 +24,8 @@ class Prefs(private val context: Context) {
     private val keyUpdateToken = stringPreferencesKey("update_token")
     private val keyUpdateManifestUrl = stringPreferencesKey("update_manifest_url")
     private val keyUpdateRepo = stringPreferencesKey("update_repo")
+    private val keyFavorites = stringPreferencesKey("favorites_json")
+    private val keyAccessKey = stringPreferencesKey("access_key")
 
     suspend fun setLastChannel(providerId: Long, channelId: Long) {
         context.dataStore.edit {
@@ -67,6 +69,22 @@ class Prefs(private val context: Context) {
             if (manifestUrl != null) it[keyUpdateManifestUrl] = manifestUrl
             if (repo != null) it[keyUpdateRepo] = repo
         }
+    }
+
+    // --- Favorites (JSON map: providerId -> [streamKeys]) ---
+    suspend fun favoritesJson(): String =
+        context.dataStore.data.map { it[keyFavorites] ?: "{}" }.first()
+
+    suspend fun setFavoritesJson(json: String) {
+        context.dataStore.edit { it[keyFavorites] = json }
+    }
+
+    // --- Control-panel password ("" = no protection) ---
+    suspend fun accessKey(): String =
+        context.dataStore.data.map { it[keyAccessKey] ?: "" }.first()
+
+    suspend fun setAccessKey(key: String) {
+        context.dataStore.edit { it[keyAccessKey] = key }
     }
 
     companion object {

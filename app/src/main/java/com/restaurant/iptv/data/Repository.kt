@@ -6,6 +6,8 @@ import com.restaurant.iptv.data.entity.HiddenGroupEntity
 import com.restaurant.iptv.data.entity.ProviderEntity
 import com.restaurant.iptv.data.net.M3uParser
 import com.restaurant.iptv.data.net.XtreamClient
+import com.restaurant.iptv.epg.EpgFetcher
+import com.restaurant.iptv.epg.EpgStore
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
@@ -121,5 +123,51 @@ class Repository(context: Context) {
         var a = raw.trim().removePrefix("http://").removePrefix("https://").trimEnd('/')
         if (!a.contains(":")) a = "$a:8080"
         return a
+    }
+
+    // ---------- EPG ----------
+
+    /** Fetch the XMLTV guide for a provider into the in-memory EpgStore. */
+    suspend fun refreshEpg(providerId: Long): Boolean {
+        val p = dao.getProvider(providerId) ?: return false
+        val url = when (p.type) {
+            "xtream" -> {
+                val server = p.xtreamServer?.trim()?.trimEnd('/') ?: return false
+                val u = enc(p.xtreamUsername.orEmpty())
+                val pw = enc(p.xtreamPassword.orEmpty())
+                "$server/xmltv.php?username=$u&password=$pw"
+            }
+            "m3u" -> p.epgUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return false
+            else -> return false
+        }
+        return try {
+            val map = EpgFetcher.fetch(url)
+            EpgStore.put(providerId, map)
+            map.isNotEmpty()
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
+    private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
+
+    // ---------- Favorites (per provider, stored in prefs) ----------
+
+    private suspend fun favMap(): MutableMap<String, MutableList<String>> =
+        runCatching {
+            json.decodeFromString<Map<String, List<String>>>(prefs.favoritesJson())
+                .mapValues { it.value.toMutableList() }.toMutableMap()
+        }.getOrElse { mutableMapOf() }
+
+    suspend fun getFavorites(providerId: Long): Set<String> =
+        favMap()[providerId.toString()]?.toSet() ?: emptySet()
+
+    /** Toggle a favorite; returns the new favorite state. */
+    suspend fun toggleFavorite(providerId: Long, streamKey: String): Boolean {
+        val map = favMap()
+        val set = map.getOrPut(providerId.toString()) { mutableListOf() }
+        val nowFav = if (set.contains(streamKey)) { set.remove(streamKey); false } else { set.add(streamKey); true }
+        prefs.setFavoritesJson(json.encodeToString(map as Map<String, List<String>>))
+        return nowFav
     }
 }
