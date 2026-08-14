@@ -32,6 +32,21 @@ async function loadTvs() {
   tvs = await jget('/api/tvs');
   $('#emptyHint').style.display = tvs.length ? 'none' : 'block';
   renderGrid();
+  populateSyncSource();
+}
+
+function populateSyncSource() {
+  const sel = $('#syncSource');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '';
+  tvs.forEach((tv) => {
+    const o = document.createElement('option');
+    o.value = tv.address;
+    o.textContent = tv.name || tv.address;
+    sel.appendChild(o);
+  });
+  if (prev) sel.value = prev;
 }
 
 $('#addTvForm').onsubmit = async (e) => {
@@ -260,6 +275,39 @@ $('#bulkPlayAll').onclick = () => bulkPlay(tvs);
 $('#bulkPlaySel').onclick = () => bulkPlay(selectedTvs());
 $('#bulkStop').onclick = () => { tvs.forEach((tv) => fetch(base(tv) + '/api/stop', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {})); };
 $('#bulkReconnect').onclick = () => { tvs.forEach((tv) => fetch(base(tv) + '/api/retry', { method: 'POST', headers: { 'X-Access-Key': ak() } }).catch(() => {})); };
+
+// ---------- Category sync ----------
+async function copyCategories(targets) {
+  const srcAddr = $('#syncSource').value;
+  const src = tvs.find((t) => t.address === srcAddr);
+  if (!src) { $('#syncMsg').textContent = 'Pick a source TV first.'; return; }
+  $('#syncMsg').textContent = 'Reading categories from ' + (src.name || src.address) + '…';
+  let groups;
+  try { groups = await jget(base(src) + '/api/groups'); }
+  catch (e) { $('#syncMsg').textContent = '⚠ Could not read categories from ' + src.address; return; }
+  if (!Array.isArray(groups) || !groups.length) {
+    $('#syncMsg').textContent = 'That TV has no categories loaded yet — set up its provider first.';
+    return;
+  }
+  const visible = groups.filter((g) => !g.hidden).map((g) => g.name);
+  const others = targets.filter((t) => t.address !== srcAddr);
+  if (!others.length) { $('#syncMsg').textContent = 'No other TVs to copy to.'; return; }
+  $('#syncMsg').textContent = 'Copying…';
+  let ok = 0, off = 0;
+  for (const tv of others) {
+    try {
+      await fetch(base(tv) + '/api/groups/keep', form({ groups: visible.join('\n') }));
+      delete channelCache[tv.address];
+      ok++;
+    } catch (e) { off++; }
+  }
+  const n = visible.length;
+  $('#syncMsg').textContent = `Copied ${n} shown categor${n === 1 ? 'y' : 'ies'} to ${ok} TV(s)` +
+    (off ? `, ${off} offline` : '') + '. Their screens update on the next channel reload.';
+  setTimeout(pollAll, 500);
+}
+$('#syncAll').onclick = () => copyCategories(tvs);
+$('#syncSel').onclick = () => copyCategories(selectedTvs());
 
 // ---------- Boot ----------
 async function init() {

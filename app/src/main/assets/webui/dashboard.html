@@ -37,6 +37,17 @@
   </section>
 
   <section class="card">
+    <h2>Sync categories</h2>
+    <div class="bulkbar">
+      <span class="muted small">Copy shown/hidden categories from</span>
+      <select id="syncSource" class="search"></select>
+      <button id="syncSel" class="btn">Copy to selected</button>
+      <button id="syncAll" class="btn primary">Copy to all others</button>
+    </div>
+    <div class="muted small" id="syncMsg">Curate categories on one TV, then copy that exact shown/hidden set to the others so every screen has the same trimmed lineup. Each TV keeps its own Xtream login — only which categories are visible is copied.</div>
+  </section>
+
+  <section class="card">
     <h2>Add a TV</h2>
     <form id="addTvForm" class="addbar">
       <input name="name" placeholder="Name (e.g. Bar TV)" />
