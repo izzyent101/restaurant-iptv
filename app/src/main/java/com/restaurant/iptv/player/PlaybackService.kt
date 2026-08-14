@@ -386,7 +386,7 @@ class PlaybackService : Service(), PlaybackCommands {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Marhaba IPTV")
             .setContentText(text)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
