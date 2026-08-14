@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#0e1116" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MMG TV" />
+<title>MMG TV — Control Center</title>
+<link rel="stylesheet" href="/style.css" />
+<style>
+  .tvgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .addbar, .bulkbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .addbar input { flex: 1; min-width: 160px; }
+  .selwrap { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 600; }
+  .tvcard .controls { margin-top: 10px; }
+  .tvchannelbox, .tvconfigbox { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .tvchannellist { display: grid; gap: 5px; max-height: 260px; overflow: auto; margin-top: 8px; }
+  .dash-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .offline { opacity: .55; }
+  .tvcard.alert { border-color: #e5534b; box-shadow: 0 0 0 1px #e5534b33; }
+  .tvhealth { font-size: 12px; margin-top: 5px; }
+  .hOk { color: #3fb950; } .hBad { color: #ff8b84; } .hWarn { color: #d29922; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/logo.png" class="brand-logo" alt="MMG" /> MMG TV — Control Center</div>
+  <a class="dash-link" href="/">This TV →</a>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Bulk control</h2>
+    <div class="bulkbar">
+      <input id="bulkChannel" class="search" placeholder="Channel name (e.g. ESPN)" />
+      <button id="bulkPlaySel" class="btn">Play on selected</button>
+      <button id="bulkPlayAll" class="btn primary">Play on all</button>
+      <button id="bulkStop" class="btn">Stop all</button>
+      <button id="bulkReconnect" class="btn">Reconnect all</button>
+    </div>
+    <div class="muted small" id="bulkMsg">Matches the channel by name on each TV's own provider. Tick a TV to include it in "selected".</div>
+    <div class="bulkbar" style="margin-top:12px">
+      <span class="muted small">Browse from</span>
+      <select id="browseSource" class="search"></select>
+      <button id="btnBrowse" class="btn" type="button">Browse channels</button>
+    </div>
+    <div id="browseBox" style="display:none;margin-top:10px">
+      <div id="browseGroups" class="chips"></div>
+      <input id="browseSearch" class="search" placeholder="Search channels…" style="margin:8px 0;max-width:100%" />
+      <div id="browseList" class="channels"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Sync categories</h2>
+    <div class="bulkbar">
+      <span class="muted small">Copy shown/hidden categories from</span>
+      <select id="syncSource" class="search"></select>
+      <button id="syncSel" class="btn">Copy to selected</button>
+      <button id="syncAll" class="btn primary">Copy to all others</button>
+    </div>
+    <div class="muted small" id="syncMsg">Curate categories on one TV, then copy that exact shown/hidden set to the others so every screen has the same trimmed lineup. Each TV keeps its own Xtream login — only which categories are visible is copied.</div>
+  </section>
+
+  <section class="card">
+    <h2>Add a TV</h2>
+    <form id="addTvForm" class="addbar">
+      <input name="name" placeholder="Name (e.g. Bar TV)" />
+      <input name="address" placeholder="Tailscale IP or host:port (e.g. 100.101.102.103:8080)" required />
+      <input name="mac" placeholder="MAC for wake-up (optional, e.g. A4:5E:60:B2:19:7C)" />
+      <button class="btn primary" type="submit">Add TV</button>
+    </form>
+    <div class="muted small">Add each TV by its Tailscale IP (or LAN IP). Port defaults to 8080.</div>
+  </section>
+
+  <div id="fleetSummary" class="muted small" style="margin:2px 0 10px"></div>
+  <div id="tvGrid" class="tvgrid"></div>
+  <p class="muted small" id="emptyHint" style="display:none">No TVs yet. Add each TV above by its address.</p>
+</main>
+
+<script src="/dashboard.js"></script>
+</body>
+</html>
