@@ -5,23 +5,24 @@
     android:background="@drawable/row_bg"
     android:focusable="true"
     android:gravity="center_vertical"
+    android:minHeight="72dp"
     android:orientation="horizontal"
-    android:paddingHorizontal="14dp"
+    android:paddingHorizontal="16dp"
     android:paddingVertical="12dp">
 
     <TextView
         android:id="@+id/chNumber"
-        android:layout_width="46dp"
+        android:layout_width="54dp"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:textColor="#8B98A5"
-        android:textSize="15sp" />
+        android:textColor="#7E8A98"
+        android:textSize="16sp" />
 
     <ImageView
         android:id="@+id/chLogo"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="14dp"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginEnd="16dp"
         android:scaleType="fitCenter"
         android:contentDescription="logo" />
 
@@ -38,35 +39,37 @@
             android:maxLines="2"
             android:ellipsize="end"
             android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/chNow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:singleLine="true"
+            android:layout_marginTop="3dp"
+            android:maxLines="1"
             android:ellipsize="end"
-            android:textColor="#9FB2C6"
-            android:textSize="13sp" />
+            android:textColor="#A9BED6"
+            android:textSize="14sp" />
 
         <ProgressBar
             android:id="@+id/chProgress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="4dp"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="7dp"
+            android:layout_marginEnd="12dp"
             android:max="100"
-            android:progressTint="#2E7DFF" />
+            android:progressTint="#2E7DFF"
+            android:progressBackgroundTint="#26303C" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/chStar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
+        android:layout_marginStart="12dp"
         android:text="☆"
         android:textColor="#6B7683"
-        android:textSize="20sp" />
+        android:textSize="22sp" />
 </LinearLayout>

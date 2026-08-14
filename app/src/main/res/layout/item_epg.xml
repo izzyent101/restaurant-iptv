@@ -5,37 +5,42 @@
     android:background="@drawable/row_bg"
     android:focusable="true"
     android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="10dp">
+    android:paddingHorizontal="18dp"
+    android:paddingVertical="12dp">
 
     <TextView
         android:id="@+id/epgTime"
-        android:layout_width="64dp"
+        android:layout_width="58dp"
         android:layout_height="wrap_content"
-        android:textColor="#8B98A5"
-        android:textSize="13sp" />
+        android:textColor="#9FB2C6"
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:layout_marginStart="6dp"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/epgTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#E6EDF3"
-            android:textSize="14sp" />
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textColor="#F2F6FB"
+            android:textSize="15sp" />
 
         <TextView
             android:id="@+id/epgDesc"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxLines="2"
+            android:layout_marginTop="3dp"
+            android:maxLines="3"
             android:ellipsize="end"
             android:textColor="#8B98A5"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

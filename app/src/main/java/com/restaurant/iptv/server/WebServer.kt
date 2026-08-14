@@ -12,6 +12,7 @@ import com.restaurant.iptv.player.PlaybackState
 import com.restaurant.iptv.update.UpdateChecker
 import com.restaurant.iptv.update.UpdateState
 import io.ktor.http.ContentType
+import io.ktor.http.Cookie
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -64,22 +65,37 @@ class WebServer(
                 allowNonSimpleContentTypes = true
             }
 
-            // Password gate: if a control password is set, every /api/* call
-            // (except the status probe) must carry the matching X-Access-Key.
-            // Static pages stay open so the login prompt can load.
+            // Password gate. When a control password is set, NOTHING is served
+            // until the visitor authenticates — not even the app HTML. Page
+            // requests from an unauthenticated client get only the bare login
+            // screen (no provider/setup/dashboard content leaks). API calls get
+            // a 401. Auth is proven by the X-Access-Key header (used by the app's
+            // fetches and cross-TV dashboard calls) OR the httpOnly "mak" cookie
+            // (set at login, used for top-level page loads).
             intercept(ApplicationCallPipeline.Plugins) {
                 if (call.request.httpMethod == HttpMethod.Options) return@intercept
+                val key = prefs.accessKey()
+                if (key.isEmpty()) return@intercept  // no password → fully open
+
                 val path = call.request.uri.substringBefore('?')
-                if (path.startsWith("/api/") && path != "/api/security/status") {
-                    val key = prefs.accessKey()
-                    if (key.isNotEmpty() && call.request.headers["X-Access-Key"] != key) {
-                        call.respondText(
-                            json.encodeToString(ApiResult(false, "unauthorized")),
-                            ContentType.Application.Json, HttpStatusCode.Unauthorized
-                        )
-                        finish()
-                    }
+                // Endpoints needed to render/handle the login screen itself.
+                if (path == "/api/security/status" || path == "/api/login") return@intercept
+
+                val authed = call.request.headers["X-Access-Key"] == key ||
+                    call.request.cookies["mak"] == key
+                if (authed) return@intercept
+
+                if (path.startsWith("/api/")) {
+                    call.respondText(
+                        json.encodeToString(ApiResult(false, "unauthorized")),
+                        ContentType.Application.Json, HttpStatusCode.Unauthorized
+                    )
+                } else {
+                    // Any page/asset request → serve ONLY the login screen.
+                    val bytes = this@WebServer.context.assets.open("webui/login.html").readBytes()
+                    call.respondBytes(bytes, ContentType.Text.Html)
                 }
+                finish()
             }
             install(StatusPages) {
                 exception<Throwable> { call, cause ->
@@ -98,6 +114,7 @@ class WebServer(
                 get("/style.css") { call.respondAsset("style.css", ContentType.Text.CSS) }
                 get("/dashboard") { call.respondAsset("dashboard.html", ContentType.Text.Html) }
                 get("/dashboard.js") { call.respondAsset("dashboard.js", ContentType.Text.JavaScript) }
+                get("/login.html") { call.respondAsset("login.html", ContentType.Text.Html) }
                 get("/logo.png") { call.respondAsset("logo.png", ContentType.Image.PNG) }
 
                 // --- Central dashboard: the list of TVs to control ---
@@ -121,11 +138,29 @@ class WebServer(
                 get("/api/security/status") {
                     call.respondJson("{\"protected\":${prefs.accessKey().isNotEmpty()}}")
                 }
+                // Login from the bare login screen: verify the password, then set
+                // an httpOnly session cookie so page loads are authenticated.
+                post("/api/login") {
+                    val pw = call.receiveParameters()["password"]?.trim().orEmpty()
+                    val key = prefs.accessKey()
+                    if (key.isNotEmpty() && pw == key) {
+                        call.response.cookies.append(authCookie(key))
+                        call.respondJson(json.encodeToString(ApiResult(true)))
+                    } else {
+                        call.respondText(
+                            json.encodeToString(ApiResult(false, "Wrong password")),
+                            ContentType.Application.Json, HttpStatusCode.Unauthorized
+                        )
+                    }
+                }
                 post("/api/security/password") {
                     // Reachable when no password is set (open) or with the current
                     // password (enforced by the gate above). Empty clears protection.
                     val newKey = call.receiveParameters()["password"]?.trim().orEmpty()
                     prefs.setAccessKey(newKey)
+                    // Keep the setter authenticated (or clear the cookie on removal).
+                    if (newKey.isEmpty()) call.response.cookies.append(Cookie("mak", "", path = "/", maxAge = 0, httpOnly = true))
+                    else call.response.cookies.append(authCookie(newKey))
                     call.respondJson(json.encodeToString(ApiResult(true, if (newKey.isEmpty()) "Password cleared" else "Password set")))
                 }
 
@@ -348,6 +383,16 @@ class WebServer(
         channelCount = channelCount, expiresAt = expiresAt,
         maxConnections = maxConnections, lastUpdated = lastUpdated,
         lastError = lastError, active = active
+    )
+
+    /** One-year httpOnly session cookie proving the visitor entered the password. */
+    private fun authCookie(key: String) = Cookie(
+        name = "mak",
+        value = key,
+        path = "/",
+        maxAge = 60 * 60 * 24 * 365,
+        httpOnly = true,
+        extensions = mapOf("SameSite" to "Strict")
     )
 
     private suspend fun io.ktor.server.application.ApplicationCall.respondJson(body: String) =

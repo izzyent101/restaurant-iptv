@@ -43,13 +43,23 @@ class EpgAdapter : RecyclerView.Adapter<EpgAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val p = items[position]
-        holder.time.text = timeFmt.format(Date(p.startMs))
-        holder.title.text = p.title
         val now = System.currentTimeMillis()
-        holder.itemView.isSelected = p.startMs <= now && p.endMs > now
+        val airing = p.startMs <= now && p.endMs > now
+        if (airing) {
+            holder.time.text = "NOW"
+            holder.time.setTextColor(0xFF2E7DFF.toInt())
+            holder.title.setTextColor(0xFFFFFFFF.toInt())
+        } else {
+            holder.time.text = timeFmt.format(Date(p.startMs))
+            holder.time.setTextColor(0xFF9FB2C6.toInt())
+            holder.title.setTextColor(0xFFF2F6FB.toInt())
+        }
+        holder.title.text = p.title
+        holder.itemView.isSelected = airing
         holder.desc.text = p.desc ?: ""
+        holder.desc.visibility = if (!p.desc.isNullOrBlank() && (airing || holder.itemView.isFocused)) View.VISIBLE else View.GONE
         holder.itemView.setOnFocusChangeListener { _, f ->
-            holder.desc.visibility = if (f && !p.desc.isNullOrBlank()) View.VISIBLE else View.GONE
+            holder.desc.visibility = if ((f || airing) && !p.desc.isNullOrBlank()) View.VISIBLE else View.GONE
         }
     }
 

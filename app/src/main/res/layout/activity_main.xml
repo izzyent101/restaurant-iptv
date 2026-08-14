@@ -96,17 +96,19 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Full browser: category sidebar + channel list -->
+    <!-- Full browser: Guide (left) | Channels (center) | Categories (right) -->
     <LinearLayout
         android:id="@+id/browserPanel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:background="#F00B0E13"
+        android:background="#F00A0D12"
         android:visibility="gone">
 
+        <!-- Guide for the focused channel (press LEFT to enter / scroll) -->
         <LinearLayout
-            android:layout_width="320dp"
+            android:id="@+id/epgPanel"
+            android:layout_width="440dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:background="#12161C">
@@ -114,36 +116,85 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="18dp"
-                android:text="Categories"
+                android:paddingHorizontal="20dp"
+                android:paddingTop="18dp"
+                android:paddingBottom="4dp"
+                android:text="GUIDE"
                 android:textColor="#8B98A5"
-                android:textSize="13sp"
+                android:textSize="12sp"
+                android:letterSpacing="0.12"
                 android:textAllCaps="true" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/categoryList"
+            <TextView
+                android:id="@+id/epgHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="20dp"
+                android:paddingBottom="14dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:text="Guide"
+                android:textColor="#FFFFFF"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#232A33" />
+
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:paddingBottom="16dp"
-                android:clipToPadding="false" />
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/epgList"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingVertical="8dp"
+                    android:clipToPadding="false" />
+
+                <TextView
+                    android:id="@+id/epgEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:paddingHorizontal="24dp"
+                    android:gravity="center"
+                    android:text="No guide data for this channel.\nAdd an EPG / XMLTV URL in the web setup to see the schedule."
+                    android:textColor="#6B7683"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+            </FrameLayout>
         </LinearLayout>
 
+        <!-- Channels (primary, widest) -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="#0A0D12">
 
             <TextView
                 android:id="@+id/channelHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="18dp"
+                android:paddingHorizontal="20dp"
+                android:paddingTop="18dp"
+                android:paddingBottom="14dp"
+                android:singleLine="true"
+                android:ellipsize="end"
                 android:text="Channels"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#232A33" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/channelList"
@@ -151,35 +202,54 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:paddingHorizontal="12dp"
-                android:paddingBottom="20dp"
+                android:paddingVertical="8dp"
                 android:clipToPadding="false" />
-        </LinearLayout>
 
-        <!-- EPG panel for the focused channel -->
-        <LinearLayout
-            android:id="@+id/epgPanel"
-            android:layout_width="420dp"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="#12161C"
-            android:visibility="gone">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#232A33" />
 
             <TextView
-                android:id="@+id/epgHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="18dp"
-                android:text="Guide"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="12dp"
+                android:text="OK  Play      ◄  Guide      ►  Categories      ★  Hold OK to favorite"
+                android:textColor="#6B7683"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Categories (press RIGHT to enter) -->
+        <LinearLayout
+            android:layout_width="300dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="#12161C">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="18dp"
+                android:paddingTop="18dp"
+                android:paddingBottom="14dp"
+                android:text="CATEGORIES"
+                android:textColor="#8B98A5"
+                android:textSize="12sp"
+                android:letterSpacing="0.12"
+                android:textAllCaps="true" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#232A33" />
 
             <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/epgList"
+                android:id="@+id/categoryList"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:paddingBottom="16dp"
+                android:paddingVertical="8dp"
                 android:clipToPadding="false" />
         </LinearLayout>
     </LinearLayout>

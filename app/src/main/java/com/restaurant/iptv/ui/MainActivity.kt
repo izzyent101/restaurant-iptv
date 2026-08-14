@@ -157,6 +157,7 @@ class MainActivity : AppCompatActivity() {
         val progs = EpgStore.programmes(pid, item.channel.epgChannelId).filter { it.endMs > now }
         epgAdapter.submit(progs)
         binding.epgHeader.text = item.channel.name
+        binding.epgEmpty.visibility = if (progs.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun toggleFavorite(ch: ChannelEntity) {
@@ -271,14 +272,23 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER ->
                 if (!open) { showBrowser(); return true }
             KeyEvent.KEYCODE_INFO -> { toggleInfoBar(); return true }
+            // Layout is  [ Guide | Channels | Categories ] .
+            // LEFT enters the guide (like TiviMate); RIGHT enters categories.
             KeyEvent.KEYCODE_DPAD_LEFT -> if (open) {
-                if (binding.channelList.hasFocus()) { binding.categoryList.requestFocus(); return true }
-                if (binding.epgList.hasFocus()) { binding.channelList.requestFocus(); return true }
+                when {
+                    binding.channelList.hasFocus() -> {
+                        if ((binding.epgList.adapter?.itemCount ?: 0) > 0) binding.epgList.requestFocus()
+                        return true
+                    }
+                    binding.categoryList.hasFocus() -> { binding.channelList.requestFocus(); return true }
+                    binding.epgList.hasFocus() -> return true
+                }
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (open) {
-                if (binding.categoryList.hasFocus()) { binding.channelList.requestFocus(); return true }
-                if (binding.channelList.hasFocus() && (binding.epgList.adapter?.itemCount ?: 0) > 0) {
-                    binding.epgList.requestFocus(); return true
+                when {
+                    binding.channelList.hasFocus() -> { binding.categoryList.requestFocus(); return true }
+                    binding.epgList.hasFocus() -> { binding.channelList.requestFocus(); return true }
+                    binding.categoryList.hasFocus() -> return true
                 }
             }
             KeyEvent.KEYCODE_DPAD_UP -> if (!open) { surf(-1); return true }
