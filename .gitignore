@@ -1,0 +1,15 @@
+.gradle/
+build/
+/app/build/
+/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing key lives in CI secrets, never committed
+keystore/
+*.jks
