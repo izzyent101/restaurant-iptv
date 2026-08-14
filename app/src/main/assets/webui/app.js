@@ -166,27 +166,60 @@ async function play(id) {
   setTimeout(pollStatus, 400);
 }
 
-// ---------- Groups management ----------
-async function loadGroupManage() {
-  const groups = await api('/api/groups');
+// ---------- Categories management ----------
+let allGroups = [];
+let groupReload = null;
+
+function scheduleChannelReload() {
+  clearTimeout(groupReload);
+  groupReload = setTimeout(loadChannels, 400);
+}
+
+function renderGroupManage() {
+  const q = ($('#groupSearch').value || '').toLowerCase();
   const box = $('#groupManage');
   box.innerHTML = '';
-  groups.forEach((g) => {
-    const el = document.createElement('div');
+  const shown = allGroups.filter((g) => g.name.toLowerCase().includes(q));
+  const visibleCount = allGroups.filter((g) => !g.hidden).length;
+  $('#groupCount').textContent = visibleCount + ' of ' + allGroups.length + ' shown';
+
+  shown.forEach((g) => {
+    const el = document.createElement('label');
     el.className = 'groupItem' + (g.hidden ? ' hidden' : '');
-    const name = document.createElement('span');
-    name.textContent = g.name;
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.textContent = g.hidden ? 'Show' : 'Hide';
-    btn.onclick = async () => {
-      await api(g.hidden ? '/api/groups/unhide' : '/api/groups/hide', form({ group: g.name }));
-      await loadGroupManage();
-      await loadChannels();
+    const left = document.createElement('span');
+    left.textContent = g.name;
+    left.style.minWidth = '0';
+    left.style.overflow = 'hidden';
+    left.style.textOverflow = 'ellipsis';
+    left.style.whiteSpace = 'nowrap';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !g.hidden;
+    cb.style.width = 'auto';
+    cb.style.flex = 'none';
+    cb.onchange = async () => {
+      g.hidden = !cb.checked;
+      el.classList.toggle('hidden', g.hidden);
+      $('#groupCount').textContent = allGroups.filter((x) => !x.hidden).length + ' of ' + allGroups.length + ' shown';
+      await api(g.hidden ? '/api/groups/hide' : '/api/groups/unhide', form({ group: g.name }));
+      scheduleChannelReload();
     };
-    el.appendChild(name); el.appendChild(btn);
+    el.appendChild(left);
+    el.appendChild(cb);
     box.appendChild(el);
   });
+  if (shown.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'muted small';
+    empty.textContent = 'No categories match “' + q + '”.';
+    box.appendChild(empty);
+  }
+}
+
+async function loadGroupManage() {
+  allGroups = await api('/api/groups');
+  if (!Array.isArray(allGroups)) allGroups = [];
+  renderGroupManage();
 }
 
 // ---------- Provider form ----------
@@ -220,6 +253,19 @@ function wire() {
   };
   $('#search').oninput = renderChannels;
   $('#pType').onchange = toggleProviderFields;
+
+  $('#groupSearch').oninput = renderGroupManage;
+  $('#btnGroupsAll').onclick = async () => {
+    await api('/api/groups/showall', { method: 'POST' });
+    await loadGroupManage();
+    scheduleChannelReload();
+  };
+  $('#btnGroupsNone').onclick = async () => {
+    if (!confirm('Hide every category? You can re-show any of them afterward.')) return;
+    await api('/api/groups/hideall', { method: 'POST' });
+    await loadGroupManage();
+    scheduleChannelReload();
+  };
 
   $('#btnRefreshEpg').onclick = async () => {
     const b = $('#btnRefreshEpg'); b.textContent = 'Loading guide…';

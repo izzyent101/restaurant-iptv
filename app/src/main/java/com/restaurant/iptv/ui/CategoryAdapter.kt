@@ -6,7 +6,15 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.restaurant.iptv.R
 
-/** Left sidebar of categories (All, Favorites, and provider groups). */
+/**
+ * Left sidebar of categories (All, Favorites, and provider groups).
+ *
+ * Focus highlight is handled entirely by the row background selector
+ * (state_focused / state_selected) so moving the D-pad does NOT trigger any
+ * adapter rebinds — that churn was the source of the scroll lag/repeat.
+ * Focusing a row just reports the selection; MainActivity debounces the
+ * (heavier) channel-list rebuild so fast scrolling stays smooth.
+ */
 class CategoryAdapter(
     private val onSelect: (String) -> Unit
 ) : RecyclerView.Adapter<CategoryAdapter.VH>() {
@@ -14,6 +22,10 @@ class CategoryAdapter(
     private val items = ArrayList<String>()
     var selectedIndex = 0
         private set
+
+    init { setHasStableIds(true) }
+
+    override fun getItemId(position: Int): Long = items[position].hashCode().toLong()
 
     fun submit(list: List<String>) {
         items.clear()
@@ -36,17 +48,23 @@ class CategoryAdapter(
         val name = items[position]
         holder.text.text = name
         holder.text.isSelected = position == selectedIndex
-        val choose = {
-            if (selectedIndex != position) {
-                val old = selectedIndex
-                selectedIndex = position
-                notifyItemChanged(old)
-                notifyItemChanged(position)
-                onSelect(name)
+
+        holder.text.setOnClickListener {
+            val pos = holder.bindingAdapterPosition
+            if (pos != RecyclerView.NO_POSITION) {
+                selectedIndex = pos
+                onSelect(items[pos])
             }
         }
-        holder.text.setOnClickListener { choose() }
-        holder.text.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) choose() }
+        holder.text.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                val pos = holder.bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION && pos != selectedIndex) {
+                    selectedIndex = pos
+                    onSelect(items[pos])
+                }
+            }
+        }
     }
 
     override fun getItemCount(): Int = items.size

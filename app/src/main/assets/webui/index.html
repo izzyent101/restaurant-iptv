@@ -72,8 +72,18 @@
   </section>
 
   <section class="card">
-    <h2>Groups</h2>
-    <p class="muted small">Hidden groups stay hidden across provider refreshes.</p>
+    <div class="row">
+      <h2>Categories</h2>
+      <div class="pill" id="groupCount">…</div>
+    </div>
+    <p class="muted small">Pick only the categories you want. Hidden ones disappear from this TV and its remote — and stay hidden across provider refreshes. Great for trimming a bulky provider down to just what the restaurant needs.</p>
+    <div class="row" style="gap:8px;margin:10px 0">
+      <input id="groupSearch" class="search" placeholder="Filter categories…" />
+      <div class="controls">
+        <button type="button" id="btnGroupsAll" class="btn">Show all</button>
+        <button type="button" id="btnGroupsNone" class="btn danger">Hide all</button>
+      </div>
+    </div>
     <div id="groupManage" class="groups"></div>
   </section>
 

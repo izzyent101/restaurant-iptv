@@ -306,6 +306,30 @@ class WebServer(
                     if (prov != null && group != null) repo.unhideGroup(prov.id, group)
                     call.respondJson(json.encodeToString(ApiResult(true)))
                 }
+                // Curate: keep ONLY the given groups visible, hide every other group.
+                // Groups are newline-separated so commas in names are safe.
+                post("/api/groups/keep") {
+                    val prov = repo.getActiveProvider()
+                    val keep = call.receiveParameters()["groups"]
+                        ?.split("\n")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toHashSet()
+                        ?: hashSetOf()
+                    if (prov != null) {
+                        for (g in repo.getGroups(prov.id)) {
+                            if (keep.contains(g)) repo.unhideGroup(prov.id, g) else repo.hideGroup(prov.id, g)
+                        }
+                    }
+                    call.respondJson(json.encodeToString(ApiResult(true)))
+                }
+                post("/api/groups/showall") {
+                    val prov = repo.getActiveProvider()
+                    if (prov != null) for (g in repo.getHiddenGroups(prov.id)) repo.unhideGroup(prov.id, g)
+                    call.respondJson(json.encodeToString(ApiResult(true)))
+                }
+                post("/api/groups/hideall") {
+                    val prov = repo.getActiveProvider()
+                    if (prov != null) for (g in repo.getGroups(prov.id)) repo.hideGroup(prov.id, g)
+                    call.respondJson(json.encodeToString(ApiResult(true)))
+                }
             }
         }.also { it.start(wait = false) }
         Log.i(TAG, "Web control server listening on :$port")

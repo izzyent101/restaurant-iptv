@@ -77,6 +77,9 @@ input, select {
 .cbar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 .star { background: none; border: none; color: #6b7683; font-size: 18px; cursor: pointer; flex: none; padding: 0 4px; }
 .star.on { color: #e3b341; }
-.groups { display: grid; gap: 6px; max-height: 300px; overflow: auto; }
-.groupItem { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
-.groupItem.hidden { opacity: .5; }
+.groups { display: grid; gap: 6px; max-height: 360px; overflow: auto; }
+.groupItem { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.groupItem:hover { border-color: var(--accent); }
+.groupItem.hidden { opacity: .45; }
+.groupItem input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.brand-logo { background: transparent !important; }

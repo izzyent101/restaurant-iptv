@@ -50,6 +50,8 @@ class MainActivity : AppCompatActivity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private var numberBuffer = ""
+    private var pendingCategory: String? = null
+    private val categorySwitch = Runnable { pendingCategory?.let { showCategory(it) } }
 
     private var service: PlaybackService? = null
     private val connection = object : ServiceConnection {
@@ -69,7 +71,14 @@ class MainActivity : AppCompatActivity() {
         repo = Repository(applicationContext)
         prefs = Prefs(applicationContext)
 
-        categoryAdapter = CategoryAdapter { name -> showCategory(name) }
+        categoryAdapter = CategoryAdapter { name ->
+            // Debounce: as the D-pad flies through categories we only rebuild the
+            // (heavy) channel list once focus settles for ~180ms. Keeps scroll smooth.
+            pendingCategory = name
+            binding.channelHeader.text = name
+            ui.removeCallbacks(categorySwitch)
+            ui.postDelayed(categorySwitch, 180)
+        }
         channelAdapter = RichChannelAdapter(
             onPlay = { ch -> playChannel(ch) },
             onFocusCh = { uiItem -> onChannelFocused(uiItem) },
@@ -79,10 +88,18 @@ class MainActivity : AppCompatActivity() {
 
         binding.categoryList.layoutManager = LinearLayoutManager(this)
         binding.categoryList.adapter = categoryAdapter
+        binding.categoryList.setHasFixedSize(true)
+        binding.categoryList.itemAnimator = null
+        binding.categoryList.setItemViewCacheSize(24)
         binding.channelList.layoutManager = LinearLayoutManager(this)
         binding.channelList.adapter = channelAdapter
+        binding.channelList.setHasFixedSize(true)
+        binding.channelList.itemAnimator = null
+        binding.channelList.setItemViewCacheSize(24)
         binding.epgList.layoutManager = LinearLayoutManager(this)
         binding.epgList.adapter = epgAdapter
+        binding.epgList.setHasFixedSize(true)
+        binding.epgList.itemAnimator = null
 
         requestNotifPermissionIfNeeded()
         PlaybackService.start(this)
@@ -152,6 +169,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playChannel(ch: ChannelEntity) {
+        ui.removeCallbacks(categorySwitch)
         service?.cmdPlayChannel(ch.id)
         hideBrowser()
         showInfoBar(ch)
