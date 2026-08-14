@@ -1,0 +1,85 @@
+:root {
+  --bg: #0e1116;
+  --card: #161b22;
+  --line: #232a33;
+  --text: #e6edf3;
+  --muted: #8b98a5;
+  --accent: #2e7dff;
+  --danger: #e5534b;
+  --ok: #3fb950;
+  --warn: #d29922;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0;
+  background: var(--bg); z-index: 5;
+}
+.brand { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+.brand-logo { width: 30px; height: 30px; border-radius: 7px; background: #fff; padding: 1px; }
+main { max-width: 900px; margin: 0 auto; padding: 20px; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 18px; margin-bottom: 18px;
+}
+h2 { margin: 0 0 8px; font-size: 16px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.big { font-size: 22px; font-weight: 700; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  background: #21262d; color: var(--text); border: 1px solid var(--line);
+  padding: 9px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { border-color: #40282a; color: #ff8b84; }
+.pill {
+  padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: #21262d; border: 1px solid var(--line);
+}
+.pill.playing { background: rgba(63,185,80,.15); color: var(--ok); border-color: rgba(63,185,80,.4); }
+.pill.buffering, .pill.recovering { background: rgba(210,153,34,.15); color: var(--warn); border-color: rgba(210,153,34,.4); }
+.pill.error, .pill.no_provider, .pill.idle { background: rgba(229,83,75,.12); color: #ff8b84; border-color: rgba(229,83,75,.35); }
+.grid { display: grid; gap: 12px; }
+label { display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
+input, select {
+  background: #0d1117; color: var(--text); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px; font-size: 14px; width: 100%;
+}
+.formActions { display: flex; gap: 8px; margin-top: 4px; }
+.search { max-width: 260px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+.chip {
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: #0d1117; font-size: 12px; cursor: pointer;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.channels { display: grid; gap: 6px; max-height: 460px; overflow: auto; }
+.channel {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+}
+.channel:hover { border-color: var(--accent); }
+.channel .cname { font-weight: 600; }
+.channel .cgroup { font-size: 11px; color: var(--muted); }
+.channel.playing { border-color: var(--ok); }
+.ch-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.ch-logo { width: 34px; height: 34px; object-fit: contain; border-radius: 6px; background: #0d1117; flex: none; }
+.ch-meta { min-width: 0; }
+.cepg { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cbar { margin-top: 5px; height: 4px; background: #1c2530; border-radius: 3px; overflow: hidden; max-width: 320px; }
+.cbar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.star { background: none; border: none; color: #6b7683; font-size: 18px; cursor: pointer; flex: none; padding: 0 4px; }
+.star.on { color: #e3b341; }
+.groups { display: grid; gap: 6px; max-height: 360px; overflow: auto; }
+.groupItem { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.groupItem:hover { border-color: var(--accent); }
+.groupItem.hidden { opacity: .45; }
+.groupItem input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.brand-logo { background: transparent !important; }
