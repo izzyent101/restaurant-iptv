@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#0e1116" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="MMG TV" />
+<title>MMG TV — Control</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/logo.png" class="brand-logo" alt="MMG" /> MMG TV</div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <a href="/dashboard" style="color:#2e7dff;text-decoration:none;font-weight:600">All TVs →</a>
+    <div id="statusPill" class="pill">…</div>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="statusCard">
+    <div class="row">
+      <div>
+        <div class="big" id="nowChannel">—</div>
+        <div class="muted" id="nowState">Loading…</div>
+      </div>
+      <div class="controls">
+        <button id="btnRetry" class="btn">Reconnect</button>
+        <button id="btnRefresh" class="btn">Refresh channels</button>
+        <button id="btnStop" class="btn danger">Stop</button>
+      </div>
+    </div>
+    <div class="muted small" id="diag"></div>
+  </section>
+
+  <section class="card">
+    <h2>Provider / Xtream login</h2>
+    <p class="muted small">Stored only on this TV. Leave the password blank when editing to keep the current one.</p>
+    <form id="providerForm" class="grid">
+      <label>Type
+        <select name="type" id="pType">
+          <option value="xtream">Xtream Codes</option>
+          <option value="m3u">M3U URL</option>
+        </select>
+      </label>
+      <label>Name <input name="name" id="pName" placeholder="My provider" /></label>
+      <div class="xtream-fields">
+        <label>Server URL <input name="server" id="pServer" placeholder="http://host:port" /></label>
+        <label>Username <input name="username" id="pUser" placeholder="username" /></label>
+        <label>Password <input name="password" id="pPass" type="password" placeholder="(unchanged)" /></label>
+      </div>
+      <div class="m3u-fields" style="display:none">
+        <label>M3U URL <input name="m3uUrl" id="pM3u" placeholder="http://.../playlist.m3u" /></label>
+      </div>
+      <label>EPG / XMLTV URL (optional) <input name="epgUrl" id="pEpg" placeholder="http://.../xmltv.php" /></label>
+      <div class="formActions">
+        <button type="submit" class="btn primary">Save &amp; load</button>
+        <button type="button" id="btnDeleteProvider" class="btn danger">Remove</button>
+      </div>
+    </form>
+    <div id="providerMsg" class="muted small"></div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <h2>Channels</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="btnRefreshEpg" class="btn">Refresh guide</button>
+        <input id="search" class="search" placeholder="Search channels…" />
+      </div>
+    </div>
+    <div id="groupFilter" class="chips"></div>
+    <div id="channelList" class="channels"></div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <h2>Categories</h2>
+      <div class="pill" id="groupCount">…</div>
+    </div>
+    <p class="muted small">Pick only the categories you want. Hidden ones disappear from this TV and its remote, and the choice survives provider refreshes.</p>
+    <div class="row" style="gap:8px;margin:10px 0">
+      <input id="groupSearch" class="search" placeholder="Filter categories…" />
+      <div class="controls">
+        <button type="button" id="btnGroupsAll" class="btn">Show all</button>
+        <button type="button" id="btnGroupsNone" class="btn danger">Hide all</button>
+      </div>
+    </div>
+    <div id="groupManage" class="groups"></div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <h2>Arrange categories</h2>
+      <button type="button" id="btnOrderReset" class="btn">Reset A–Z</button>
+    </div>
+    <p class="muted small">Only the categories you show are listed here. Top of this list = top of the TV sidebar.</p>
+    <div id="arrangeList" class="groups"></div>
+  </section>
+
+  <section class="card">
+    <h2>Playback</h2>
+    <label class="groupItem" style="cursor:pointer">
+      <span style="min-width:0">
+        <div>Compatibility mode</div>
+        <div class="muted small">For TVs that reboot during playback (some TCL models). Uses a gentler decode path — turns on by itself if the TV crash-loops.</div>
+      </span>
+      <input type="checkbox" id="compatToggle" style="width:18px;height:18px;flex:none" />
+    </label>
+    <div id="compatMsg" class="muted small" style="margin-top:8px"></div>
+  </section>
+
+  <section class="card">
+    <h2>Security</h2>
+    <div class="muted small" id="securityLine">Checking…</div>
+    <form id="securityForm" class="grid" style="margin-top:10px">
+      <label>Control password (blank = open to anyone on the network)
+        <input name="password" id="secPass" type="password" placeholder="Set a password" />
+      </label>
+      <div class="formActions">
+        <button type="submit" class="btn primary">Save password</button>
+        <button type="button" id="btnClearPass" class="btn danger">Remove password</button>
+      </div>
+    </form>
+    <div id="securityMsg" class="muted small"></div>
+  </section>
+
+  <section class="card">
+    <h2>Software &amp; updates</h2>
+    <div class="muted small" id="versionLine">Version …</div>
+    <p class="muted small">Updates never install on their own. Check when you like; install only when you're ready (it briefly restarts the app, then resumes the last channel).</p>
+    <div class="formActions" style="margin-top:6px">
+      <button type="button" id="btnCheckUpdate" class="btn primary">Check for updates</button>
+      <button type="button" id="btnInstallUpdate" class="btn" style="display:none">Install now</button>
+    </div>
+    <div id="updateMsg" class="muted small" style="margin-top:8px"></div>
+    <details style="margin-top:12px">
+      <summary class="muted small" style="cursor:pointer">Advanced: self-host updates</summary>
+      <form id="updateForm" class="grid" style="margin-top:8px">
+        <label>Self-host manifest URL (leave blank to use GitHub)
+          <input name="manifestUrl" id="updManifest" placeholder="http://restaurant-pc:port/marhaba/version.json" />
+        </label>
+        <button type="submit" class="btn">Save</button>
+      </form>
+    </details>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>
