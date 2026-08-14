@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="172dp"
+    android:layout_height="match_parent"
+    android:layout_marginEnd="12dp"
+    android:background="@drawable/row_pill"
+    android:focusable="true"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <ImageView
+        android:id="@+id/histLogo"
+        android:layout_width="58dp"
+        android:layout_height="58dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="logo" />
+
+    <TextView
+        android:id="@+id/histName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:textColor="#F2F5F8"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:lineSpacingMultiplier="1.05" />
+</LinearLayout>

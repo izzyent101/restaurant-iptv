@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="theme-color" content="#0e1116" />
+<title>MMG TV</title>
+<style>
+  :root { --bg:#0e1116; --card:#161b22; --line:#232a33; --text:#e6edf3; --muted:#8b98a5; --accent:#2e7dff; }
+  * { box-sizing: border-box; }
+  html,body { height:100%; }
+  body {
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .box {
+    width:100%; max-width:380px; background:var(--card);
+    border:1px solid var(--line); border-radius:16px; padding:28px 24px; text-align:center;
+  }
+  .logo { width:88px; height:88px; margin-bottom:10px; }
+  .title { font-weight:700; font-size:22px; }
+  .sub { color:var(--muted); font-size:13px; margin:8px 0 20px; }
+  input {
+    width:100%; background:#0d1117; color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:13px 14px; font-size:16px; text-align:center;
+  }
+  button {
+    width:100%; margin-top:12px; background:var(--accent); color:#fff; border:none;
+    border-radius:10px; padding:13px 14px; font-size:15px; font-weight:600; cursor:pointer;
+  }
+  .ghost { background:transparent; border:1px solid var(--line); color:var(--muted); }
+  .hint { color:var(--muted); font-size:12px; margin-top:14px; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <img class="logo" src="logo.png" alt="MMG TV" />
+    <div class="title">MMG&nbsp;TV</div>
+
+    <div id="opening" style="display:none">
+      <div class="sub">Opening the control panel…</div>
+      <button class="ghost" id="btnChange" type="button">Change address</button>
+    </div>
+
+    <form id="setup" style="display:none">
+      <div class="sub">Enter the dashboard address<br>(any TV's IP, or a Tailscale IP when away).</div>
+      <input id="addr" placeholder="192.168.1.101:8080" autocomplete="off" />
+      <button type="submit">Open panel</button>
+      <div class="hint">Works on the restaurant wifi, or from anywhere via Tailscale.</div>
+    </form>
+  </div>
+<script>
+  'use strict';
+  var KEY = 'mmgAddr';
+  var timer = null;
+
+  function normalize(a) {
+    a = (a || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    if (a && a.indexOf(':') === -1) a += ':8080';
+    return a;
+  }
+  function go(addr) { location.href = 'http://' + addr + '/dashboard'; }
+
+  function showSetup() {
+    if (timer) { clearTimeout(timer); timer = null; }
+    document.getElementById('opening').style.display = 'none';
+    document.getElementById('setup').style.display = 'block';
+    var input = document.getElementById('addr');
+    input.value = localStorage.getItem(KEY) || '';
+    input.focus();
+  }
+
+  document.getElementById('setup').onsubmit = function (e) {
+    e.preventDefault();
+    var addr = normalize(document.getElementById('addr').value);
+    if (!addr) return;
+    localStorage.setItem(KEY, addr);
+    go(addr);
+  };
+  document.getElementById('btnChange').onclick = showSetup;
+
+  var saved = localStorage.getItem(KEY);
+  if (saved) {
+    document.getElementById('opening').style.display = 'block';
+    timer = setTimeout(function () { go(saved); }, 1200);
+  } else {
+    showSetup();
+  }
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+</script>
+</body>
+</html>
