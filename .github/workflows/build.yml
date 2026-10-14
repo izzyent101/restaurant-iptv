@@ -78,3 +78,25 @@ jobs:
           name: MMG IPTV v1.0.${{ github.run_number }}
           files: app/build/outputs/apk/release/app-release.apk
           fail_on_unmatched_files: true
+
+  gateway-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Windows installer syntax
+        shell: powershell
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$env:GITHUB_WORKSPACE\gateway\setup.ps1", [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Format-List
+            throw 'Windows installer has syntax errors'
+          }
+      - name: Test packaged office gateway on Windows
+        run: |
+          node gateway/package.cjs
+          node --test tests/dashboard.test.cjs gateway/server.test.cjs
