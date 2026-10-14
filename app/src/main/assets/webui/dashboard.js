@@ -22,15 +22,32 @@ function form(data) {
   return { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/x-www-form-urlencoded' }, akHeaders()), body };
 }
 let promptedOnce = false;
-async function jget(url) {
-  const sentKey = ak();
-  let r = await fetch(url, { cache: 'no-store', headers: akHeaders() });
-  if (r.status === 401) {
-    // Only ONE prompt per page load — parallel calls reuse the stored key.
-    if (ak() === sentKey && !promptedOnce) { promptedOnce = true; promptKey(); }
-    if (ak() !== sentKey || promptedOnce) r = await fetch(url, { cache: 'no-store', headers: akHeaders() });
-  }
-  return r.json();
+// Keep unreachable TVs from accumulating requests indefinitely. Update checks
+// include the APK download, so callers give those requests a longer deadline.
+async function requestJson(url, opts = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const send = () => fetch(url, Object.assign({}, opts, {
+    cache: 'no-store', signal: controller.signal,
+    headers: Object.assign({}, opts.headers || {}, akHeaders())
+  }));
+  try {
+    const sentKey = ak();
+    let r = await send();
+    if (r.status === 401) {
+      if (ak() === sentKey && !promptedOnce) { promptedOnce = true; promptKey(); }
+      // A cancelled or unchanged password must not trigger another failed login.
+      if (ak() && ak() !== sentKey) r = await send();
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } finally { clearTimeout(timer); }
+}
+function jget(url) { return requestJson(url); }
+async function command(url, opts) {
+  const result = await requestJson(url, opts);
+  if (!result || result.ok !== true) throw new Error(result?.message || 'Command failed');
+  return result;
 }
 function base(tv) { return 'http://' + tv.address; }
 
@@ -38,6 +55,10 @@ function base(tv) { return 'http://' + tv.address; }
 async function loadTvs() {
   tvs = await jget('/api/tvs');
   $('#emptyHint').style.display = tvs.length ? 'none' : 'block';
+  Object.keys(health).forEach((address) => {
+    if (!tvs.some((tv) => tv.address === address)) delete health[address];
+  });
+  updateSummary();
   renderGrid();
   populateSyncSource();
 }
@@ -164,6 +185,7 @@ function buildCard(tv) {
 }
 
 // ---------- Status polling ----------
+const polling = new Set();
 const health = {};   // address -> 'ok' | 'warn' | 'bad' | 'off'
 
 function fmtDur(sec) {
@@ -175,7 +197,7 @@ function fmtDur(sec) {
 }
 
 function updateSummary() {
-  const vals = Object.values(health);
+  const vals = tvs.map((tv) => health[tv.address]).filter(Boolean);
   if (!vals.length) { $('#fleetSummary').textContent = ''; return; }
   const ok = vals.filter((v) => v === 'ok').length;
   const warn = vals.filter((v) => v === 'warn').length;
@@ -192,9 +214,11 @@ async function pollAll() { tvs.forEach(pollTv); }
 
 async function pollTv(tv) {
   const card = cardEls[tv.address];
-  if (!card) return;
+  if (!card || polling.has(tv.address)) return;
+  polling.add(tv.address);
   try {
     const s = await jget(base(tv) + '/api/status');
+    if (cardEls[tv.address] !== card) return;
     card.classList.remove('offline');
     const pill = card.querySelector('.state');
     pill.textContent = labelFor(s.state);
@@ -232,6 +256,7 @@ async function pollTv(tv) {
     }
     updateSummary();
   } catch (e) {
+    if (cardEls[tv.address] !== card) return;
     card.classList.add('offline');
     card.classList.add('alert');
     const pill = card.querySelector('.state');
@@ -243,7 +268,7 @@ async function pollTv(tv) {
     hp.innerHTML = '<span class="dot"></span>Offline';
     health[tv.address] = 'off';
     updateSummary();
-  }
+  } finally { polling.delete(tv.address); }
 }
 
 function labelFor(state) {
@@ -256,12 +281,16 @@ async function toggleChannels(tv, card) {
   const box = card.querySelector('.tvchannelbox');
   const show = box.style.display === 'none';
   box.style.display = show ? 'block' : 'none';
-  if (show) { await ensureChannels(tv); renderChannelList(tv, card); }
+  if (show) {
+    try { await ensureChannels(tv); renderChannelList(tv, card); }
+    catch (e) { card.querySelector('.tvchannellist').textContent = 'Could not load channels. Close and reopen to retry.'; }
+  }
 }
 async function ensureChannels(tv) {
   if (!channelCache[tv.address]) {
-    try { channelCache[tv.address] = await jget(base(tv) + '/api/channels'); }
-    catch (e) { channelCache[tv.address] = []; }
+    const channels = await jget(base(tv) + '/api/channels');
+    if (!Array.isArray(channels)) throw new Error('Invalid channel list');
+    channelCache[tv.address] = channels;
   }
   return channelCache[tv.address];
 }
@@ -334,16 +363,18 @@ function selectedTvs() {
 async function bulkPlay(targets) {
   const name = ($('#bulkChannel').value || '').trim().toLowerCase();
   if (!name) { $('#bulkMsg').textContent = 'Type a channel name first.'; return; }
+  if (!targets.length) { $('#bulkMsg').textContent = 'Select at least one TV first.'; return; }
   let ok = 0, miss = 0, off = 0;
   for (const tv of targets) {
     try {
       const chans = await ensureChannels(tv);
-      const match = chans.find((c) => c.name.toLowerCase().includes(name));
-      if (match) { await fetch(base(tv) + '/api/play', form({ channelId: match.id })); ok++; }
+      const match = chans.find((c) => c.name.trim().toLowerCase() === name) ||
+        chans.find((c) => c.name.toLowerCase().includes(name));
+      if (match) { await command(base(tv) + '/api/play', form({ channelId: match.id })); ok++; }
       else miss++;
     } catch (e) { off++; }
   }
-  $('#bulkMsg').textContent = `Played on ${ok} TV(s)` + (miss ? `, ${miss} had no match` : '') + (off ? `, ${off} offline` : '') + '.';
+  $('#bulkMsg').textContent = `Played on ${ok} TV(s)` + (miss ? `, ${miss} had no match` : '') + (off ? `, ${off} unreachable or failed` : '') + '.';
   setTimeout(pollAll, 500);
 }
 $('#bulkPlayAll').onclick = () => bulkPlay(tvs);
@@ -356,7 +387,8 @@ async function openBrowse() {
   const src = tvs.find((t) => t.address === $('#browseSource').value);
   if (!src) { $('#bulkMsg').textContent = 'Add a TV first.'; return; }
   $('#bulkMsg').textContent = 'Loading channels from ' + (src.name || src.address) + '…';
-  browseChannels = await ensureChannels(src);
+  try { browseChannels = await ensureChannels(src); }
+  catch (e) { $('#bulkMsg').textContent = 'Could not load channels. Please retry.'; return; }
   if (!browseChannels.length) { $('#bulkMsg').textContent = '⚠ Could not load channels from ' + src.address; return; }
   $('#bulkMsg').textContent = 'Click a channel to select it, then hit "Play on selected" or "Play on all".';
   $('#browseBox').style.display = 'block';
@@ -447,14 +479,14 @@ async function copyCategories(targets) {
   let ok = 0, off = 0;
   for (const tv of others) {
     try {
-      await fetch(base(tv) + '/api/groups/keep', form({ groups: visible.join('\n') }));
+      await command(base(tv) + '/api/groups/keep', form({ groups: visible.join('\n') }));
       delete channelCache[tv.address];
       ok++;
     } catch (e) { off++; }
   }
   const n = visible.length;
   $('#syncMsg').textContent = `Copied ${n} shown categor${n === 1 ? 'y' : 'ies'} to ${ok} TV(s)` +
-    (off ? `, ${off} offline` : '') + '. Their screens update on the next channel reload.';
+    (off ? `, ${off} unreachable or failed` : '') + '. Their screens update on the next channel reload.';
   setTimeout(pollAll, 500);
 }
 $('#syncAll').onclick = () => copyCategories(tvs);
@@ -484,7 +516,7 @@ async function loadFleetVersions() {
     st.className = 'muted small';
     if (!v) { st.textContent = 'offline'; st.style.color = '#ff8b84'; }
     else if (v.updateAvailable) { st.textContent = v.versionName + ' → ' + v.availableVersion + ' ready'; st.style.color = '#d29922'; }
-    else { st.textContent = v.versionName + ' · up to date'; st.style.color = '#3fb950'; }
+    else { st.textContent = v.versionName + ' · ' + (v.updateMessage || 'Not checked yet'); }
     right.appendChild(st);
     // Per-TV install click — update just this one when you choose to.
     if (v && v.updateAvailable) {
@@ -494,8 +526,12 @@ async function loadFleetVersions() {
       btn.onclick = async () => {
         if (!confirm('Install the update on ' + (tv.name || tv.address) + '? The app restarts briefly and resumes its last channel.')) return;
         btn.textContent = '…';
-        await fetch(base(tv) + '/api/update/install', { method: 'POST', headers: akHeaders() }).catch(() => {});
-        btn.textContent = 'Sent ✓';
+        btn.disabled = true;
+        try {
+          await command(base(tv) + '/api/update/install', { method: 'POST' });
+          btn.textContent = 'Sent ✓';
+        } catch (e) { btn.textContent = 'Failed — retry'; }
+        finally { btn.disabled = false; }
         setTimeout(loadFleetVersions, 20000);
       };
       right.appendChild(btn);
@@ -505,28 +541,56 @@ async function loadFleetVersions() {
   });
 }
 
+let fleetBusy = false;
+function setFleetBusy(busy) {
+  fleetBusy = busy;
+  $('#fleetCheck').disabled = busy;
+  $('#fleetInstall').disabled = busy;
+}
 $('#fleetCheck').onclick = async () => {
-  $('#fleetUpdMsg').textContent = 'Checking every TV…';
-  await Promise.all(tvs.map((tv) =>
-    fetch(base(tv) + '/api/update/check', { method: 'POST', headers: akHeaders() }).catch(() => {})
-  ));
-  await loadFleetVersions();
-  const ready = tvs.filter((tv) => fleetVer[tv.address] && fleetVer[tv.address].updateAvailable).length;
-  $('#fleetUpdMsg').textContent = ready
-    ? ready + ' TV(s) have an update downloaded and ready — hit "Update all ready TVs".'
-    : 'All reachable TVs are up to date.';
+  if (fleetBusy) return;
+  if (!tvs.length) { $('#fleetUpdMsg').textContent = 'Add a TV first.'; return; }
+  setFleetBusy(true);
+  $('#fleetUpdMsg').textContent = 'Checking every TV and downloading available updates…';
+  try {
+    const results = await Promise.all(tvs.map(async (tv) => {
+      try {
+        const r = await requestJson(base(tv) + '/api/update/check', { method: 'POST' }, 300000);
+        // Older TVs use ok=false for both "up to date" and errors.
+        if (r.ok === true) return 'ready';
+        if (/^Up to date \(/.test(r.message || '')) return 'current';
+        return 'failed';
+      } catch (e) { return 'failed'; }
+    }));
+    await loadFleetVersions();
+    const ready = results.filter((r) => r === 'ready').length;
+    const current = results.filter((r) => r === 'current').length;
+    const failed = results.filter((r) => r === 'failed').length;
+    $('#fleetUpdMsg').textContent = `${ready} ready to update · ${current} up to date` +
+      (failed ? ` · ${failed} could not be checked — retry when reachable.` : '.') +
+      (ready ? ' Choose "Update all ready TVs" to install.' : '');
+  } finally { setFleetBusy(false); }
 };
 
 $('#fleetInstall').onclick = async () => {
+  if (fleetBusy) return;
   const ready = tvs.filter((tv) => fleetVer[tv.address] && fleetVer[tv.address].updateAvailable);
   if (!ready.length) { $('#fleetUpdMsg').textContent = 'Nothing to install — run "Check all" first.'; return; }
   if (!confirm('Install the update on ' + ready.length + ' TV(s)? Each app restarts briefly and resumes its last channel.')) return;
-  $('#fleetUpdMsg').textContent = 'Pushing update to ' + ready.length + ' TV(s)…';
-  await Promise.all(ready.map((tv) =>
-    fetch(base(tv) + '/api/update/install', { method: 'POST', headers: akHeaders() }).catch(() => {})
-  ));
-  $('#fleetUpdMsg').textContent = 'Install sent to ' + ready.length + ' TV(s). If a TV shows an install prompt on screen, press OK on its remote once.';
-  setTimeout(loadFleetVersions, 20000);
+  setFleetBusy(true);
+  $('#fleetUpdMsg').textContent = 'Requesting installation on ' + ready.length + ' TV(s)…';
+  try {
+    const results = await Promise.all(ready.map(async (tv) => {
+      try { await command(base(tv) + '/api/update/install', { method: 'POST' }); return true; }
+      catch (e) { return false; }
+    }));
+    const sent = results.filter(Boolean).length;
+    const failed = ready.length - sent;
+    $('#fleetUpdMsg').textContent = 'Install accepted by ' + sent + ' TV(s).' +
+      (failed ? ' ' + failed + ' failed or did not confirm — check their status before retrying.' : '') +
+      (sent ? ' If a TV shows an install prompt, press OK on its remote once.' : '');
+    setTimeout(loadFleetVersions, 20000);
+  } finally { setFleetBusy(false); }
 };
 
 // ---------- Boot ----------
