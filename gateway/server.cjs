@@ -81,7 +81,8 @@ function createGateway(config, options = {}) {
       if (req.method === 'GET' && url.pathname === '/') { res.writeHead(302,{Location:'/dashboard'}); return res.end(); }
       if (req.method === 'GET' && staticFiles[url.pathname]) {
         const [file, mime] = staticFiles[url.pathname];
-        res.writeHead(200, {'Content-Type':mime}); return res.end(fs.readFileSync(path.join(assets,file)));
+        const bytes = fs.readFileSync(path.join(assets,file));
+        res.writeHead(200, {'Content-Type':mime}); return res.end(bytes);
       }
       const body = req.method === 'POST' ? await boundedBody(req, 1024 * 1024) : undefined;
       if ((req.method === 'GET' && url.pathname === '/api/tvs') || (req.method === 'POST' && url.pathname === '/api/import-tvs')) {

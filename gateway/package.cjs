@@ -7,7 +7,7 @@ const assets = path.resolve(__dirname,'../app/src/main/assets/webui');
 fs.mkdirSync(path.join(out,'webui'), {recursive:true});
 for (const file of ['server.cjs','setup.ps1','Setup.cmd','README.txt']) fs.copyFileSync(path.join(__dirname,file),path.join(out,file));
 for (const file of ['style.css','logo.png','icon-192.png','icon-512.png','apple-touch-icon.png']) fs.copyFileSync(path.join(assets,file),path.join(out,'webui',file));
-let js = fs.readFileSync(path.join(assets,'dashboard.js'),'utf8');
+let js = fs.readFileSync(path.join(assets,'dashboard.js'),'utf8').replace(/\r\n/g,'\n');
 const base = "function base(tv) { return 'http://' + tv.address; }";
 if (!js.includes(base)) throw new Error('Dashboard base function changed; review the gateway adapter');
 js = js.replace(base,"function base(tv) { return '/tv/' + encodeURIComponent(tv.address); }")
@@ -17,7 +17,7 @@ js = js.replace(base,"function base(tv) { return '/tv/' + encodeURIComponent(tv.
  .replace("await fetch('/api/tvs/remove',", "await command('/api/tvs/remove',")
  .replace("document.addEventListener('DOMContentLoaded', init);", "document.addEventListener('DOMContentLoaded', () => init().catch(() => { $('#gatewayMsg').textContent = 'Enter the TV control password above, then retry. If it still fails, check the restaurant connection.'; }));");
 fs.writeFileSync(path.join(out,'webui/dashboard.js'),js);
-let html = fs.readFileSync(path.join(assets,'dashboard.html'),'utf8');
+let html = fs.readFileSync(path.join(assets,'dashboard.html'),'utf8').replace(/\r\n/g,'\n');
 html = html.replace('<a class="dash-link" href="/">This TV →</a>', '<button class="btn" id="installApp" hidden>Install app</button>');
 html = html.replace('<main>', `<main>
 <section class="card"><h2>Office control center</h2>

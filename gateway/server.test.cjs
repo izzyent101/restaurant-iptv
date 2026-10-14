@@ -9,9 +9,9 @@ const origin = 'https://office.example.ts.net';
 const identity = {'tailscale-user-login':'owner@example.com'};
 const config = {origin,source:'192.168.1.243:8080',allowedAddresses:['192.168.1.243:8080','192.168.1.240:8080'],allowedUsers:['owner@example.com']};
 const list = [{name:'Primary',address:config.source},{name:'Stairs',address:config.allowedAddresses[1]}];
-async function start(t, upstream, dataDir) {
+async function start(t, upstream, dataDir, assets = path.resolve('build/office-dashboard/webui')) {
   const dir = dataDir || fs.mkdtempSync(path.join(os.tmpdir(),'mmg-test-'));
-  const server = createGateway(config,{dataDir:dir,assets:path.resolve('build/office-dashboard/webui'),fetch:upstream});
+  const server = createGateway(config,{dataDir:dir,assets,fetch:upstream});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   t.after(async()=>{server.closeAllConnections(); await new Promise(resolve=>server.close(resolve)); if(!dataDir)fs.rmSync(dir,{recursive:true,force:true});});
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -98,4 +98,10 @@ test('packaged browser uses same-origin controls, session-only password, install
  assert.equal((html.match(/id="tvGrid"/g)||[]).length,1);
  assert.ok(html.indexOf('id="tvGrid"')<html.indexOf('Bulk control'));
  assert.equal((await h.call('/dashboard')).headers.get('cache-control'),'no-store');
+});
+
+test('missing packaged assets return an error without leaving a hanging connection',async t=>{
+ const h=await start(t,async()=>reply(list),undefined,path.join(os.tmpdir(),'mmg-missing-assets'));
+ assert.equal((await h.call('/dashboard')).status,502);
+ assert.equal((await h.call('/api/tvs')).status,200);
 });

@@ -99,4 +99,5 @@ jobs:
       - name: Test packaged office gateway on Windows
         run: |
           node gateway/package.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test tests/dashboard.test.cjs gateway/server.test.cjs
