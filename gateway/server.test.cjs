@@ -1,4 +1,5 @@
-const {test} = require('node:test');
+const {test: nodeTest} = require('node:test');
+const test = (name, fn) => nodeTest(name, {timeout: 15000}, fn);
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -12,7 +13,7 @@ async function start(t, upstream, dataDir) {
   const dir = dataDir || fs.mkdtempSync(path.join(os.tmpdir(),'mmg-test-'));
   const server = createGateway(config,{dataDir:dir,assets:path.resolve('build/office-dashboard/webui'),fetch:upstream});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  t.after(async()=>{await new Promise(resolve=>server.close(resolve)); if(!dataDir)fs.rmSync(dir,{recursive:true,force:true});});
+  t.after(async()=>{server.closeAllConnections(); await new Promise(resolve=>server.close(resolve)); if(!dataDir)fs.rmSync(dir,{recursive:true,force:true});});
   const base = `http://127.0.0.1:${server.address().port}`;
   return {dir,call:(route,opts={})=>fetch(base+route,{...opts,headers:{...identity,...opts.headers}})};
 }
