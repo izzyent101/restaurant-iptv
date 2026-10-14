@@ -27,9 +27,13 @@ if ($serve.Web) {
 }
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 # This folder contains executable code run by the startup task. Only admins and
-# SYSTEM can change it. No TV password is stored in the installation.
-& icacls.exe $installDir /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+# SYSTEM can change code. The service account can read it and write fleet data only.
+& icacls.exe $installDir /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-19:(OI)(CI)RX' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Could not protect installation folder permissions.' }
+$dataDir = Join-Path $installDir 'data'
+New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+& icacls.exe $dataDir /grant:r '*S-1-5-19:(OI)(CI)M' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Could not set fleet-data permissions.' }
 $taskName = 'MMG TV Office Dashboard'
 if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) { Stop-ScheduledTask -TaskName $taskName }
 foreach ($file in @('server.cjs','README.txt')) { Copy-Item (Join-Path $PSScriptRoot $file) $installDir -Force }
@@ -59,7 +63,8 @@ $config = @{source=$site.source; allowedAddresses=@($site.allowedAddresses); all
 $action = New-ScheduledTaskAction -Execute $node -Argument ('"' + (Join-Path $installDir 'server.cjs') + '"') -WorkingDirectory $installDir
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 10 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+$principal = New-ScheduledTaskPrincipal -UserId 'S-1-5-19' -LogonType ServiceAccount -RunLevel Limited
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
 Start-ScheduledTask -TaskName $taskName
 Start-Sleep -Seconds 3
 $health = $null

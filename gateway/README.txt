@@ -29,7 +29,7 @@ Operation
 Files
 Installation: C:\ProgramData\MMG-TV-Office
 Fleet backup: data\fleet.json (contains names, IP addresses and optional MACs)
-Startup task: MMG TV Office Dashboard (runs as SYSTEM at Windows startup)
+Startup task: MMG TV Office Dashboard (runs as Local Service at Windows startup)
 Runtime: official Node.js 22 portable runtime; checksum checked during setup.
 
 Uninstall (Administrator PowerShell)

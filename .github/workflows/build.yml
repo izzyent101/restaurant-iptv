@@ -28,8 +28,10 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test dashboard controls
-        run: node --test tests/dashboard.test.cjs
+      - name: Test dashboard and private office gateway
+        run: |
+          node gateway/package.cjs
+          node --test tests/dashboard.test.cjs gateway/server.test.cjs
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
