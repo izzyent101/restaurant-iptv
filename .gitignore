@@ -13,3 +13,8 @@ captures/
 # Signing key lives in CI secrets, never committed
 keystore/
 *.jks
+
+# Local office deployment configuration and saved fleet
+/gateway/config.json
+/gateway/site.json
+/gateway/data/
