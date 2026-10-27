@@ -30,3 +30,7 @@ Automatic screen power-on after AC restoration remains unverified. No factory/se
 Forecast cards group NWS day/night periods by local Minneapolis date, showing seven dates, highs/lows, maximum precipitation probability, and vector weather animation. Missing temperatures are shown as dashes. One shared 12 fps drawing loop runs only while the launcher is visible.
 
 Version 1.0.4 uses translucent gradient panels, a compact favorites grid, floating controls dock, and restrained weather dividers. Weather is rendered in one software-backed view to avoid partial-frame artifacts on the TCL GPU. Dialogs use a bounded, readable window.
+
+Version 1.0.6: weather starts in an 80dp compact strip; OK toggles details and Back collapses it. Only the bottom control dock hides after 20 seconds without interaction; app tiles and weather stay visible. The first navigation press reveals controls without launching an action. Dialogs pause the hide timer, use an opaque panel, and request system blur behind on Android 12+ where supported.
+
+At the owner's explicit request, remaining third-party applications except MMG TV and Marhaba Home were removed from user 0. Prime Video, YouTube, YouTube Music and Netflix system apps were disabled. OS, Play services, networking, settings and updates were preserved. Cleanup results are recorded in the local device backup folder.

@@ -18,6 +18,34 @@ class HomeActivity : Activity() {
     private val white = Color.rgb(245, 246, 244)
     private val muted = Color.rgb(183, 196, 191)
     private lateinit var grid: GridLayout
+    private lateinit var controls: LinearLayout
+    private var dialogOpen = false
+    private var consumeWakeKey = false
+    private val hideControls = Runnable {
+        if (active && !dialogOpen) {
+            if (controls.hasFocus()) grid.getChildAt(0)?.requestFocus()
+            controls.visibility = View.INVISIBLE
+        }
+    }
+    private fun resetControls() {
+        if (!::controls.isInitialized) return
+        controls.visibility = View.VISIBLE
+        handler.removeCallbacks(hideControls)
+        if (active && !dialogOpen) handler.postDelayed(hideControls, 20000)
+    }
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val navigation = event.keyCode in listOf(19,20,21,22,23,66,4)
+        if (navigation && event.action == android.view.KeyEvent.ACTION_DOWN) {
+            consumeWakeKey = controls.visibility != View.VISIBLE
+            resetControls()
+            if (consumeWakeKey) return true
+        }
+        if (navigation && event.action == android.view.KeyEvent.ACTION_UP && consumeWakeKey) {
+            consumeWakeKey = false; return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+    override fun onUserInteraction() { super.onUserInteraction(); resetControls() }
     private lateinit var weather: WeatherStrip
     private val backdrop = MarhabaBackdrop()
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -67,13 +95,20 @@ class HomeActivity : Activity() {
         setStroke(dp(1), if (focused) Color.argb(220, 239, 240, 222) else Color.argb(60, 221, 234, 222))
     }
     private fun styleDialog(dialog: AlertDialog) {
+        dialogOpen = true
+        handler.removeCallbacks(hideControls)
+        dialog.setOnDismissListener { dialogOpen = false; resetControls() }
         dialog.show()
         dialog.window?.setBackgroundDrawable(GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            intArrayOf(Color.argb(245, 45, 61, 53), Color.argb(245, 22, 35, 30))).apply {
+            intArrayOf(Color.rgb(45, 61, 53), Color.rgb(22, 35, 30))).apply {
             cornerRadius = dp(24).toFloat(); setStroke(dp(1), Color.argb(75, 221, 234, 222))
         })
         dialog.window?.setLayout(dp(480), dp(410))
         dialog.window?.setDimAmount(.45f)
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            dialog.window?.attributes = dialog.window?.attributes?.apply { blurBehindRadius = dp(24) }
+        }
     }
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -97,8 +132,9 @@ class HomeActivity : Activity() {
             gravity = Gravity.CENTER; background = glass()
             setPadding(dp(5), dp(4), dp(5), dp(4)); elevation = dp(6).toFloat()
         }
-        fun action(label: String, block: () -> Unit) {
-            footer.addView(Button(this).apply {
+        controls = footer
+        fun action(label: String, block: () -> Unit): Button {
+            val button = Button(this).apply {
                 text = label; isAllCaps = false; textSize = 13f; setTextColor(white)
                 background = glass()
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -107,18 +143,24 @@ class HomeActivity : Activity() {
                     animate().scaleX(if (focused) 1.035f else 1f).scaleY(if (focused) 1.035f else 1f).setDuration(140).start()
                 }
                 setOnClickListener { block() }
-            }, LinearLayout.LayoutParams(dp(130), dp(36)).apply { marginStart = dp(3); marginEnd = dp(3) })
+            }
+            footer.addView(button, LinearLayout.LayoutParams(dp(120), dp(36)).apply { marginStart = dp(3); marginEnd = dp(3) })
+            return button
         }
         action("Apps") { showApps(false) }
         action("Favorites") { showApps(true) }
         action("Settings") { launch(Intent(Settings.ACTION_SETTINGS)) }
-        weather = WeatherStrip(this)
-        root.addView(weather, LinearLayout.LayoutParams(-1, dp(158)).apply { bottomMargin = dp(8) })
+        weather = WeatherStrip(this).apply {
+            isFocusable = true; isClickable = true
+            setOnClickListener { toggleWeather() }
+            setOnFocusChangeListener { _, _ -> invalidate() }
+        }
+        root.addView(weather, LinearLayout.LayoutParams(-1, dp(80)).apply { bottomMargin = dp(8) })
         root.addView(footer, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.CENTER_HORIZONTAL; topMargin = dp(7) })
         setContentView(root)
     }
-    override fun onResume() { super.onResume(); render(); active = true; weather.setActive(true); handler.post(tick) }
-    override fun onPause() { active = false; weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
+    override fun onResume() { super.onResume(); render(); active = true; weather.setActive(true); handler.post(tick); resetControls() }
+    override fun onPause() { active = false; handler.removeCallbacks(hideControls); weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
     override fun onDestroy() { handler.removeCallbacksAndMessages(null); worker.shutdownNow(); super.onDestroy() }
     private fun apps(): List<App> {
         val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
@@ -173,5 +215,12 @@ class HomeActivity : Activity() {
         try { startActivity(intent) } catch (_: Exception) { Toast.makeText(this, "This app is unavailable. Try TV settings.", Toast.LENGTH_LONG).show() }
     }
     @Deprecated("Home stays on screen")
-    override fun onBackPressed() { grid.getChildAt(0)?.requestFocus() }
+    override fun onBackPressed() {
+        if (weather.expanded) toggleWeather() else grid.getChildAt(0)?.requestFocus()
+    }
+    private fun toggleWeather() {
+        weather.expanded = !weather.expanded
+        weather.layoutParams = weather.layoutParams.apply { height = dp(if (weather.expanded) 158 else 80) }
+        weather.invalidate()
+    }
 }

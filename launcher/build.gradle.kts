@@ -9,8 +9,8 @@ android {
         applicationId = "com.marhaba.launcher"
         minSdk = 24
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 7
+        versionName = "1.0.6"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

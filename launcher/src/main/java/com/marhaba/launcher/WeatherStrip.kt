@@ -14,6 +14,7 @@ class WeatherStrip(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var days = Forecast.days(null)
     private var stamp = "Loading forecast"
+    var expanded = false
     private var animate = false
     fun setActive(value: Boolean) { animate = value; invalidate() }
     fun update(raw: String?, fetched: Long, failed: Boolean) {
@@ -27,6 +28,7 @@ class WeatherStrip(context: Context) : View(context) {
     }
     override fun onDraw(c: Canvas) {
         super.onDraw(c)
+        if (!expanded) { drawCompact(c); return }
         val save = c.save(); c.scale(width / 868f, height / 158f)
         paint.style = Paint.Style.FILL
         paint.shader = LinearGradient(0f, 0f, 868f, 158f, intArrayOf(Color.argb(220, 53, 73, 63), Color.argb(235, 18, 32, 28)), null, Shader.TileMode.CLAMP)
@@ -45,7 +47,7 @@ class WeatherStrip(context: Context) : View(context) {
         val cream = Color.rgb(244, 246, 244); val muted = Color.rgb(180, 191, 178)
         text("Minneapolis", 18f, 22f, 12f, cream)
         paint.textAlign = Paint.Align.RIGHT; paint.textSize = 9f; paint.color = muted
-        c.drawText("7-day forecast  ·  NWS  ·  $stamp  ·  °F", 850f, 22f, paint)
+        c.drawText("Close ▴  ·  NWS  ·  $stamp  ·  °F", 850f, 22f, paint)
         days.forEachIndexed { i, d ->
             val x = 10f + i * 121.5f
             if (i == 0) {
@@ -61,6 +63,32 @@ class WeatherStrip(context: Context) : View(context) {
             val condition = shortLabel(d.condition)
             text(condition, x+59f, 133f, 8.5f, muted, true)
             text(d.rain?.let { "$it% precip." } ?: "—", x+59f, 146f, 8f, Color.rgb(145, 193, 210), true)
+        }
+        c.restoreToCount(save)
+        if (animate && isShown) postInvalidateDelayed(83)
+    }
+    private fun drawCompact(c: Canvas) {
+        val save = c.save(); c.scale(width / 868f, height / 80f)
+        paint.style = Paint.Style.FILL
+        paint.shader = LinearGradient(0f,0f,868f,80f,intArrayOf(Color.rgb(43,61,51),Color.rgb(22,37,30)),null,Shader.TileMode.CLAMP)
+        c.drawRoundRect(0f,0f,868f,80f,17f,17f,paint); paint.shader=null
+        paint.style=Paint.Style.STROKE; paint.strokeWidth=if (hasFocus()) 1.8f else .7f
+        paint.color=if (hasFocus()) Color.rgb(230,237,223) else Color.argb(70,220,230,220)
+        c.drawRoundRect(1f,1f,867f,79f,17f,17f,paint); paint.style=Paint.Style.FILL
+        paint.typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL)
+        paint.color=Color.rgb(238,242,237);paint.textSize=10f;paint.textAlign=Paint.Align.LEFT
+        c.drawText("Minneapolis · 7 days",15f,18f,paint)
+        paint.textAlign=Paint.Align.RIGHT;paint.textSize=9f
+        c.drawText("${if (hasFocus()) "OK to expand" else "Expand ▾"}  ·  NWS  ·  °F",850f,18f,paint)
+        val t=(SystemClock.uptimeMillis()%120000)/1000f
+        days.forEachIndexed { i,d ->
+            val x=16f+i*121f
+            paint.color=Color.rgb(197,210,200);paint.textAlign=Paint.Align.LEFT;paint.textSize=9f
+            c.drawText(d.label,x,39f,paint)
+            paint.color=Color.rgb(244,246,244);paint.textSize=13f
+            c.drawText("${d.high?.let { "$it°" } ?: "—"} / ${d.low?.let { "$it°" } ?: "—"}",x,62f,paint)
+            val iconSave=c.save();c.scale(.65f,.65f,x+91f,49f)
+            icon(c,x+91f,49f,d.condition,d.nightOnly,t+i*.4f);c.restoreToCount(iconSave)
         }
         c.restoreToCount(save)
         if (animate && isShown) postInvalidateDelayed(83)
