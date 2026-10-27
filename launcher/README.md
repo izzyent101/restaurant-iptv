@@ -1,6 +1,6 @@
 # Marhaba Home
 
-Lightweight native Android TV home screen, separate from MMG TV. Olive, ivory and brass styling, procedural arch backdrop, clock, favorites and installed TV apps. No network permission, advertising SDK, background service or feed. MMG TV is always pinned. All apps and TV settings remain available.
+Lightweight native Android TV home screen, separate from MMG TV. Olive, ivory and brass styling, procedural palm-tree and pyramid backdrop, clock, favorites and installed TV apps. No network permission, advertising SDK, background service or feed. MMG TV is always pinned. All apps and TV settings remain available.
 
 Build: `./gradlew :launcher:assembleRelease :launcher:lintRelease`. Sign the unsigned release APK with the dedicated Marhaba Home key; retain the same key for upgrades. The local signing key is outside this repository under `~/.mmg-tv-signing/`; back it up securely. Do not commit it.
 

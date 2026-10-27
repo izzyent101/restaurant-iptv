@@ -34,12 +34,10 @@ class HomeActivity : Activity() {
             background = MarhabaBackdrop()
         }
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        header.addView(text("MARHABA  /  GRILL", 18f).apply { letterSpacing = .2f; typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, dp(36), 1f))
+        header.addView(text("MARHABA", 18f).apply { letterSpacing = .2f; typeface = Typeface.DEFAULT_BOLD }, LinearLayout.LayoutParams(0, dp(36), 1f))
         header.addView(TextClock(this).apply { format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 19f; setTextColor(white) })
         root.addView(header)
-        root.addView(text("A warm welcome.", 42f).apply { typeface = Typeface.create("serif", Typeface.NORMAL); setPadding(0, dp(23), 0, dp(5)) })
-        root.addView(text("THE MARHABA SCREEN COLLECTION", 12f, muted).apply { letterSpacing = .22f })
-        val scroll = ScrollView(this).apply { isFillViewport = false; clipToPadding = false; setPadding(0, dp(24), 0, dp(16)) }
+        val scroll = ScrollView(this).apply { isFillViewport = false; clipToPadding = false; setPadding(0, dp(45), 0, dp(16)) }
         grid = GridLayout(this).apply { columnCount = 3; clipChildren = false; clipToPadding = false }
         scroll.addView(grid)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
