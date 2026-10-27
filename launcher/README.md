@@ -44,3 +44,9 @@ Version 1.0.10 adds a vector seven-segment clock respecting 12/24-hour preferenc
 Version 1.0.11 replaces overlapping scenery with one continuous landscape: consistent horizon and pyramid lighting, layered ground planes, and two edge-framing palms. Keeps solar phases and subtle animation. Build and release lint passed; installed and visually checked on .243.
 
 Version 1.0.12 changes ground and pyramid shadows to warm sand and ochre, with asymmetric dune crests, a lit dune face and sparse sand texture. Built, lint checked and visually verified after installation on .243.
+
+## Fleet rollout 2026-10-27
+
+Version 1.0.12 installed and visually inspected on TCLs .240, .244 and .242. Home resolves to Marhaba Home and MMG TV v1.0.49 opens on each; MMG TV data was not cleared. Unused third-party apps were removed for user 0 and bundled entertainment apps disabled, leaving MMG TV and Marhaba Home as the only third-party packages. Per-device inventories and action logs are saved in the local mmg-tv-device-backups/2026-10-27 folder.
+
+.240 and .242 use `com.google.android.tvlauncher/.MainActivity` instead of launcherx; that package was disabled to establish the custom home. To restore their stock home, enable `com.google.android.tvlauncher` and set that component as home. .244 uses the launcherx recovery steps above. AC restoration behavior still needs a physical test.
