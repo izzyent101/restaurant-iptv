@@ -15,3 +15,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "RestaurantIPTV"
 include(":app")
+
+include(":launcher")
