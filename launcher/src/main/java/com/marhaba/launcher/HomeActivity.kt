@@ -155,8 +155,8 @@ class HomeActivity : Activity() {
             setOnClickListener { toggleWeather() }
             setOnFocusChangeListener { _, _ -> invalidate() }
         }
-        root.addView(weather, LinearLayout.LayoutParams(-1, dp(80)).apply { bottomMargin = dp(8) })
-        root.addView(footer, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.CENTER_HORIZONTAL; topMargin = dp(7) })
+        root.addView(footer, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(10) })
+        root.addView(weather, LinearLayout.LayoutParams(-1, dp(48)))
         setContentView(root)
     }
     override fun onResume() { super.onResume(); render(); active = true; weather.setActive(true); handler.post(tick); resetControls() }
@@ -220,7 +220,11 @@ class HomeActivity : Activity() {
     }
     private fun toggleWeather() {
         weather.expanded = !weather.expanded
-        weather.layoutParams = weather.layoutParams.apply { height = dp(if (weather.expanded) 158 else 80) }
+        weather.layoutParams = (weather.layoutParams as LinearLayout.LayoutParams).apply {
+            height = dp(if (weather.expanded) 158 else 48)
+            width = -1
+            marginStart = 0
+        }
         weather.invalidate()
     }
 }

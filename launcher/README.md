@@ -34,3 +34,5 @@ Version 1.0.4 uses translucent gradient panels, a compact favorites grid, floati
 Version 1.0.6: weather starts in an 80dp compact strip; OK toggles details and Back collapses it. Only the bottom control dock hides after 20 seconds without interaction; app tiles and weather stay visible. The first navigation press reveals controls without launching an action. Dialogs pause the hide timer, use an opaque panel, and request system blur behind on Android 12+ where supported.
 
 At the owner's explicit request, remaining third-party applications except MMG TV and Marhaba Home were removed from user 0. Prime Video, YouTube, YouTube Music and Netflix system apps were disabled. OS, Play services, networking, settings and updates were preserved. Cleanup results are recorded in the local device backup folder.
+
+Version 1.0.8 replaces the compact weather strip with a 48dp bottom ticker. It scrolls seven forecast days, pauses on focus, supports left/right browsing and OK to expand. Back collapses. App tiles and weather remain visible when the controls auto-hide.
