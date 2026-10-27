@@ -33,7 +33,7 @@ class MarhabaBackdrop : Drawable() {
             p.shader=null;p.style=Paint.Style.FILL;p.color=color;c.drawPath(Path().apply(draw),p)
         }
         // Soft distant sand establishes a single ground plane behind every landmark.
-        shape(if(night)0xff39474a.toInt() else 0xff8b8b73.toInt()) {
+        shape(if(night)0xff615451.toInt() else 0xffd3b17c.toInt()) {
             moveTo(0f,392f);cubicTo(170f,374f,310f,407f,477f,390f);cubicTo(640f,375f,800f,392f,960f,373f)
             lineTo(960f,540f);lineTo(0f,540f);close()
         }
@@ -42,14 +42,14 @@ class MarhabaBackdrop : Drawable() {
             shape(lit) { moveTo(left,base);lineTo(apex,top);lineTo(seam,base);close() }
             shape(shade) { moveTo(apex,top);lineTo(left+width,base);lineTo(seam,base);close() }
         }
-        val lit=if(night)0xff526061.toInt() else if(phase=="day")0xffb8aa80.toInt() else 0xffb19a70.toInt()
-        val shade=if(night)0xff344449.toInt() else 0xff797c62.toInt()
+        val lit=if(night)0xff93806b.toInt() else if(phase=="day")0xffdfbd83.toInt() else 0xffd9ac70.toInt()
+        val shade=if(night)0xff594b45.toInt() else 0xffa27a4e.toInt()
         // Separated silhouettes with the same vanishing plane and light direction.
         pyramid(764f,411f,150f,96f,lit,shade)
         pyramid(563f,420f,234f,173f,lit,shade)
         pyramid(411f,421f,168f,116f,lit,shade)
-        shape(if(night)0xff233a3d.toInt() else 0xff526751.toInt()) {
-            moveTo(0f,425f);cubicTo(210f,396f,300f,453f,504f,429f);cubicTo(710f,406f,821f,439f,960f,410f)
+        shape(if(night)0xff73604e.toInt() else 0xffc8985f.toInt()) {
+            moveTo(0f,445f);cubicTo(90f,429f,183f,382f,279f,405f);cubicTo(381f,430f,428f,456f,580f,434f);cubicTo(727f,412f,855f,424f,960f,402f)
             lineTo(960f,540f);lineTo(0f,540f);close()
         }
         fun palm(x:Float,y:Float,scale:Float,lean:Float) {
@@ -76,9 +76,20 @@ class MarhabaBackdrop : Drawable() {
         // Foreground framing stays out of the app and weather regions.
         palm(-9f,307f,.86f,-5f)
         palm(935f,239f,1.2f,5f)
-        shape(if(night)0xff102b2c.toInt() else 0xff263f33.toInt()) {
-            moveTo(0f,454f);cubicTo(190f,433f,320f,471f,493f,455f);cubicTo(667f,435f,808f,472f,960f,439f)
+        shape(if(night)0xff493b32.toInt() else 0xffab7847.toInt()) {
+            moveTo(0f,492f);cubicTo(139f,481f,267f,425f,409f,441f);cubicTo(550f,458f,667f,503f,773f,474f);cubicTo(860f,451f,917f,442f,960f,449f)
             lineTo(960f,540f);lineTo(0f,540f);close()
+        }
+        // A sunlit dune face and sparse dry sand grains give the ground depth.
+        shape(if(night)0xff86705a.toInt() else 0xffe3b77a.toInt()) {
+            moveTo(0f,492f);cubicTo(139f,481f,267f,425f,409f,441f)
+            cubicTo(300f,440f,192f,501f,0f,526f);close()
+        }
+        p.style=Paint.Style.FILL
+        for(i in 0..260) {
+            val x=(i*137%960).toFloat();val y=480f+(i*71%60)
+            p.color=if(i%2==0) Color.argb(25,255,226,177) else Color.argb(22,65,40,22)
+            c.drawCircle(x,y,.45f+(i%3)*.16f,p)
         }
         // Gentle left-side shade supports the launcher without a visible panel edge.
         p.shader=LinearGradient(0f,0f,490f,0f,intArrayOf(Color.argb(55,5,18,21),Color.TRANSPARENT),null,Shader.TileMode.CLAMP)
