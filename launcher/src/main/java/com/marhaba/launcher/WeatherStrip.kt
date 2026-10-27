@@ -10,6 +10,7 @@ import kotlin.math.*
 
 /** Seven vector cards, one shared 12 fps redraw only while the home is visible. */
 class WeatherStrip(context: Context) : View(context) {
+    init { setLayerType(LAYER_TYPE_SOFTWARE, null) }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var days = Forecast.days(null)
     private var stamp = "Loading forecast"
@@ -27,6 +28,13 @@ class WeatherStrip(context: Context) : View(context) {
     override fun onDraw(c: Canvas) {
         super.onDraw(c)
         val save = c.save(); c.scale(width / 868f, height / 158f)
+        paint.style = Paint.Style.FILL
+        paint.shader = LinearGradient(0f, 0f, 868f, 158f, intArrayOf(Color.argb(220, 53, 73, 63), Color.argb(235, 18, 32, 28)), null, Shader.TileMode.CLAMP)
+        c.drawRoundRect(0f, 0f, 868f, 158f, 20f, 20f, paint)
+        paint.shader = null
+        paint.style = Paint.Style.STROKE; paint.strokeWidth = .8f; paint.color = Color.argb(65, 220, 231, 224)
+        c.drawRoundRect(1f, 1f, 867f, 157f, 20f, 20f, paint)
+        paint.style = Paint.Style.FILL
         val t = (SystemClock.uptimeMillis() % 120000) / 1000f
         fun text(value: String, x: Float, y: Float, size: Float, color: Int, center: Boolean = false) {
             paint.color = color; paint.style = Paint.Style.FILL; paint.textSize = size
@@ -34,21 +42,25 @@ class WeatherStrip(context: Context) : View(context) {
             paint.textAlign = if (center) Paint.Align.CENTER else Paint.Align.LEFT
             c.drawText(value, x, y, paint)
         }
-        val cream = Color.rgb(248, 240, 219); val muted = Color.rgb(180, 191, 178)
-        text("MINNEAPOLIS  ·  7 DAYS", 0f, 14f, 12f, cream)
+        val cream = Color.rgb(244, 246, 244); val muted = Color.rgb(180, 191, 178)
+        text("Minneapolis", 18f, 22f, 12f, cream)
         paint.textAlign = Paint.Align.RIGHT; paint.textSize = 9f; paint.color = muted
-        c.drawText("NWS  ·  $stamp  ·  °F", 868f, 14f, paint)
+        c.drawText("7-day forecast  ·  NWS  ·  $stamp  ·  °F", 850f, 22f, paint)
         days.forEachIndexed { i, d ->
-            val x = i * 125f
-            paint.color = if (i == 0) Color.argb(242, 43, 62, 45) else Color.argb(237, 18, 34, 28)
-            c.drawRoundRect(x, 25f, x + 118f, 157f, 12f, 12f, paint)
-            if (i == 0) { paint.style = Paint.Style.STROKE; paint.strokeWidth = 1f; paint.color = Color.rgb(191, 163, 101); c.drawRoundRect(x,25f,x+118f,157f,12f,12f,paint); paint.style = Paint.Style.FILL }
-            text(d.label, x+59f, 43f, 11f, cream, true)
-            icon(c, x+59f, 65f, d.condition, d.nightOnly, t + i * .4f)
-            text("${d.high?.let { "$it°" } ?: "—"}  /  ${d.low?.let { "$it°" } ?: "—"}", x+59f, 113f, 16f, cream, true)
+            val x = 10f + i * 121.5f
+            if (i == 0) {
+                paint.style = Paint.Style.FILL; paint.color = Color.argb(26, 235, 240, 231)
+                c.drawRoundRect(x, 33f, x + 118f, 151f, 14f, 14f, paint)
+            } else {
+                paint.color = Color.argb(26, 221, 234, 223); paint.strokeWidth = .7f
+                c.drawLine(x-2f, 47f, x-2f, 139f, paint)
+            }
+            text(d.label, x+59f, 49f, 10f, cream, true)
+            icon(c, x+59f, 73f, d.condition, d.nightOnly, t + i * .4f)
+            text("${d.high?.let { "$it°" } ?: "—"}  /  ${d.low?.let { "$it°" } ?: "—"}", x+59f, 117f, 16f, cream, true)
             val condition = shortLabel(d.condition)
-            text(condition, x+59f, 130f, 9f, muted, true)
-            text(d.rain?.let { "$it% precip." } ?: "—", x+59f, 146f, 9f, Color.rgb(145, 193, 210), true)
+            text(condition, x+59f, 133f, 8.5f, muted, true)
+            text(d.rain?.let { "$it% precip." } ?: "—", x+59f, 146f, 8f, Color.rgb(145, 193, 210), true)
         }
         c.restoreToCount(save)
         if (animate && isShown) postInvalidateDelayed(83)
@@ -70,12 +82,13 @@ class WeatherStrip(context: Context) : View(context) {
         }
     }
     private fun icon(c: Canvas, x: Float, y: Float, condition: String, night: Boolean, t: Float) {
+        val state = c.save(); c.scale(.8f, .8f, x, y)
         val label = shortLabel(condition)
         val rain = label in listOf("Showers", "Thunderstorms", "Wintry mix")
         val snow = label == "Snow"
         val cloudy = rain || snow || label in listOf("Cloudy", "Partly cloudy", "Fog", "Windy")
         paint.style = Paint.Style.FILL
-        if (label == "Unavailable") { paint.color = Color.GRAY; paint.textSize = 20f; paint.textAlign = Paint.Align.CENTER; c.drawText("—", x, y+8, paint); return }
+        if (label == "Unavailable") { paint.color = Color.GRAY; paint.textSize = 20f; paint.textAlign = Paint.Align.CENTER; c.drawText("—", x, y+8, paint); c.restoreToCount(state); return }
         if (!cloudy || label == "Partly cloudy") {
             val sx = if (cloudy) x-12 else x
             paint.color = if (night) Color.rgb(227,230,206) else Color.rgb(242,194,91)
@@ -108,5 +121,6 @@ class WeatherStrip(context: Context) : View(context) {
             paint.color = Color.rgb(166,186,180); paint.strokeWidth=2f
             for (i in 0..2) { val shift=sin(t+i)*4; c.drawLine(x-23+shift,y+18+i*5,x+23+shift,y+18+i*5,paint) }
         }
+        c.restoreToCount(state)
     }
 }

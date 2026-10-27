@@ -28,3 +28,5 @@ Disposable caches were trimmed. Haramain Live Viewer and SmartTube were explicit
 Automatic screen power-on after AC restoration remains unverified. No factory/service-menu power setting was changed. MMG TV's existing boot receiver remains responsible for playback resume; this launcher does not override it or add another boot loop. A physical power-restoration test is required. Remaining TCLs need ADB access; the device at .245 is an Amazon Fire TV, not TCL, and has not been modified.
 
 Forecast cards group NWS day/night periods by local Minneapolis date, showing seven dates, highs/lows, maximum precipitation probability, and vector weather animation. Missing temperatures are shown as dashes. One shared 12 fps drawing loop runs only while the launcher is visible.
+
+Version 1.0.4 uses translucent gradient panels, a compact favorites grid, floating controls dock, and restrained weather dividers. Weather is rendered in one software-backed view to avoid partial-frame artifacts on the TCL GPU. Dialogs use a bounded, readable window.
