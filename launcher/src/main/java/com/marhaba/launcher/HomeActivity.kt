@@ -45,12 +45,35 @@ class HomeActivity : Activity() {
         }
         return super.dispatchKeyEvent(event)
     }
-    override fun onUserInteraction() { super.onUserInteraction(); resetControls() }
+    override fun onUserInteraction() { super.onUserInteraction(); cancelBootLaunch(); resetControls() }
     private lateinit var weather: WeatherStrip
     private lateinit var clock: DigitalClock
     private val backdrop = MarhabaBackdrop()
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private val bootLaunch = Runnable {
+        if (active && !dialogOpen) {
+            val boot = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
+            // Persist before starting: returning Home must never reopen playback.
+            if (boot >= 0 && prefs.edit().putInt("handledBoot", boot).commit()) {
+                packageManager.getLeanbackLaunchIntentForPackage("com.restaurant.iptv")?.let { launch(it) }
+            }
+        }
+    }
+    private fun scheduleBootLaunch() {
+        val boot = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
+        val previous = if (prefs.contains("handledBoot")) prefs.getInt("handledBoot", -1) else null
+        if (previous == null && boot >= 0) prefs.edit().putInt("handledBoot", boot).commit()
+        if (BootLaunchPolicy.shouldLaunch(previous, boot)) {
+            handler.removeCallbacks(bootLaunch)
+            handler.postDelayed(bootLaunch, 8000)
+        }
+    }
+    private fun cancelBootLaunch() {
+        handler.removeCallbacks(bootLaunch)
+        val boot = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
+        if (boot >= 0) prefs.edit().putInt("handledBoot", boot).commit()
+    }
     private var fetching = false
     private var active = false
     private var lastAttempt = 0L
@@ -175,8 +198,8 @@ class HomeActivity : Activity() {
         root.addView(weather, LinearLayout.LayoutParams(-1, dp(48)))
         setContentView(root)
     }
-    override fun onResume() { super.onResume(); render(); active = true; clock.setActive(true); handler.post(sceneryFrame); weather.setActive(true); handler.post(tick); resetControls() }
-    override fun onPause() { active = false; clock.setActive(false); handler.removeCallbacks(sceneryFrame); handler.removeCallbacks(hideControls); weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
+    override fun onResume() { super.onResume(); render(); active = true; clock.setActive(true); handler.post(sceneryFrame); weather.setActive(true); handler.post(tick); resetControls(); scheduleBootLaunch() }
+    override fun onPause() { handler.removeCallbacks(bootLaunch); active = false; clock.setActive(false); handler.removeCallbacks(sceneryFrame); handler.removeCallbacks(hideControls); weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
     override fun onDestroy() { handler.removeCallbacksAndMessages(null); worker.shutdownNow(); super.onDestroy() }
     private fun apps(): List<App> {
         val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
