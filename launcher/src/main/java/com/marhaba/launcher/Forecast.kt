@@ -17,17 +17,24 @@ object Forecast {
             return c.inputStream.bufferedReader().use { it.readText() }.also { check(JSONObject(it).getJSONObject("properties").getJSONArray("periods").length() > 0) }
         } finally { c.disconnect() }
     }
-    fun display(raw: String?, fetched: Long, failed: Boolean): String {
-        if (raw == null) return "MINNEAPOLIS · 55408\nForecast unavailable · retrying when connected"
-        return try {
-            val periods = JSONObject(raw).getJSONObject("properties").getJSONArray("periods")
-            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
-            val valid = (0 until periods.length()).map { periods.getJSONObject(it) }
-                .filter { (parser.parse(it.getString("endTime"))?.time ?: 0) > System.currentTimeMillis() }.take(3)
-            if (valid.isEmpty()) return "MINNEAPOLIS · 55408\nForecast expired · waiting for an update"
-            val rows = valid.joinToString("\n") { "${it.getString("name")}  ${it.getInt("temperature")}°${it.getString("temperatureUnit")}  ·  ${it.getString("shortForecast")}" }
-            val time = SimpleDateFormat("h:mm a", Locale.US).format(java.util.Date(fetched))
-            "MINNEAPOLIS · 55408\n$rows\nNWS · ${if (failed || System.currentTimeMillis()-fetched > 3600000) "Cached" else "Updated"} $time"
-        } catch (_: Exception) { "MINNEAPOLIS · 55408\nForecast unavailable" }
+    data class Day(val label: String, val high: Int?, val low: Int?, val rain: Int?, val condition: String, val nightOnly: Boolean = false)
+    fun days(raw: String?, now: Long = System.currentTimeMillis()): List<Day> {
+        val zone = java.util.TimeZone.getTimeZone("America/Chicago")
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = zone }
+        val label = SimpleDateFormat("EEE", Locale.US).apply { timeZone = zone }
+        val cal = java.util.Calendar.getInstance(zone).apply { timeInMillis = now }
+        val periods = runCatching { JSONObject(raw ?: "").getJSONObject("properties").getJSONArray("periods") }.getOrNull()
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
+        return (0..6).map { index ->
+            val key = date.format(cal.time)
+            val matches = if (periods == null) emptyList() else (0 until periods.length()).map { periods.getJSONObject(it) }
+                .filter { it.getString("startTime").take(10) == key && (parser.parse(it.getString("endTime"))?.time ?: 0) > now }
+            val daytime = matches.firstOrNull { it.optBoolean("isDaytime") }
+            val nighttime = matches.firstOrNull { !it.optBoolean("isDaytime") }
+            val primary = daytime ?: nighttime
+            val chance = matches.mapNotNull { it.optJSONObject("probabilityOfPrecipitation")?.let { v -> if (v.isNull("value")) null else v.optInt("value") } }.maxOrNull()
+            Day(if (index == 0) "TODAY" else label.format(cal.time).uppercase(Locale.US), daytime?.getInt("temperature"), nighttime?.getInt("temperature"), chance, primary?.getString("shortForecast") ?: "Unavailable", daytime == null && nighttime != null)
+                .also { cal.add(java.util.Calendar.DAY_OF_YEAR, 1) }
+        }
     }
 }

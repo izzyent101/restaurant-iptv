@@ -26,3 +26,5 @@ With ADB, run `pm enable --user 0 PACKAGE` for the four packages above, then `cm
 Disposable caches were trimmed. Haramain Live Viewer and SmartTube were explicitly uninstalled at the owner's request. Other application data and MMG TV credentials/fleet were preserved. Package inventory before cleanup is saved outside this repo in the local device backup folder.
 
 Automatic screen power-on after AC restoration remains unverified. No factory/service-menu power setting was changed. MMG TV's existing boot receiver remains responsible for playback resume; this launcher does not override it or add another boot loop. A physical power-restoration test is required. Remaining TCLs need ADB access; the device at .245 is an Amazon Fire TV, not TCL, and has not been modified.
+
+Forecast cards group NWS day/night periods by local Minneapolis date, showing seven dates, highs/lows, maximum precipitation probability, and vector weather animation. Missing temperatures are shown as dashes. One shared 12 fps drawing loop runs only while the launcher is visible.

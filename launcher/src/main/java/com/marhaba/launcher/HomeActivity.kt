@@ -18,7 +18,7 @@ class HomeActivity : Activity() {
     private val white = Color.rgb(248, 240, 219)
     private val muted = Color.rgb(186, 184, 155)
     private lateinit var grid: GridLayout
-    private lateinit var weather: TextView
+    private lateinit var weather: WeatherStrip
     private val backdrop = MarhabaBackdrop()
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -37,7 +37,7 @@ class HomeActivity : Activity() {
     private fun refreshWeather() {
         val now = System.currentTimeMillis()
         val fetched = prefs.getLong("weatherTime", 0)
-        weather.text = Forecast.display(prefs.getString("weather", null), fetched, failedWeather)
+        weather.update(prefs.getString("weather", null), fetched, failedWeather)
         if (fetching || now - fetched < 1800000 || now - lastAttempt < 300000) return
         fetching = true; lastAttempt = now
         worker.execute {
@@ -49,7 +49,7 @@ class HomeActivity : Activity() {
                     prefs.edit().putString("weather", raw).putLong("weatherTime", System.currentTimeMillis()).apply()
                 }
                 failedWeather = result.isFailure
-                if (active) weather.text = Forecast.display(prefs.getString("weather", null), prefs.getLong("weatherTime", 0), failedWeather)
+                if (active) weather.update(prefs.getString("weather", null), prefs.getLong("weatherTime", 0), failedWeather)
             }
         }
     }
@@ -72,9 +72,9 @@ class HomeActivity : Activity() {
         header.addView(ImageView(this).apply {
             setImageResource(R.drawable.marhaba_logo); scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = "Marhaba Grill"
-        }, FrameLayout.LayoutParams(dp(180), dp(112), Gravity.CENTER))
+        }, FrameLayout.LayoutParams(dp(155), dp(96), Gravity.CENTER))
         header.addView(TextClock(this).apply { format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 19f; setTextColor(white) }, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.TOP))
-        root.addView(header, LinearLayout.LayoutParams(-1, dp(115)))
+        root.addView(header, LinearLayout.LayoutParams(-1, dp(100)))
         val scroll = ScrollView(this).apply { isFillViewport = false; clipToPadding = false; setPadding(0, dp(12), 0, dp(8)) }
         grid = GridLayout(this).apply { columnCount = 3; clipChildren = false; clipToPadding = false }
         scroll.addView(grid)
@@ -93,17 +93,13 @@ class HomeActivity : Activity() {
         action("All apps") { showApps(false) }
         action("Edit favorites") { showApps(true) }
         action("TV settings") { launch(Intent(Settings.ACTION_SETTINGS)) }
-        weather = text("MINNEAPOLIS · 55408\nLoading forecast…", 12f).apply {
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            background = rounded(Color.argb(225, 18, 32, 27))
-            setLineSpacing(dp(2).toFloat(), 1f)
-        }
-        root.addView(weather, LinearLayout.LayoutParams(-1, dp(102)).apply { bottomMargin = dp(8) })
+        weather = WeatherStrip(this)
+        root.addView(weather, LinearLayout.LayoutParams(-1, dp(158)).apply { bottomMargin = dp(8) })
         root.addView(footer)
         setContentView(root)
     }
-    override fun onResume() { super.onResume(); render(); active = true; handler.post(tick) }
-    override fun onPause() { active = false; handler.removeCallbacks(tick); super.onPause() }
+    override fun onResume() { super.onResume(); render(); active = true; weather.setActive(true); handler.post(tick) }
+    override fun onPause() { active = false; weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
     override fun onDestroy() { handler.removeCallbacksAndMessages(null); worker.shutdownNow(); super.onDestroy() }
     private fun apps(): List<App> {
         val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
@@ -126,7 +122,7 @@ class HomeActivity : Activity() {
                 background = rounded(Color.rgb(30, 48, 37))
             }
             val icon = ImageView(this).apply { setImageDrawable(packageManager.getApplicationIcon(app.pkg)); scaleType = ImageView.ScaleType.FIT_CENTER }
-            tile.addView(icon, LinearLayout.LayoutParams(dp(70), dp(70)))
+            tile.addView(icon, LinearLayout.LayoutParams(dp(58), dp(58)))
             tile.addView(text(if (app.pkg == "com.restaurant.iptv") "MMG TV" else app.name, 15f).apply {
                 gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; setPadding(0, dp(10), 0, 0)
             }, LinearLayout.LayoutParams(-1, dp(35)))
@@ -136,7 +132,7 @@ class HomeActivity : Activity() {
                 tile.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
             }
             if (app.pkg == "com.restaurant.iptv") tile.addView(text("LIVE TELEVISION", 10f, muted).apply { gravity = Gravity.CENTER; letterSpacing = .18f; setPadding(0, dp(5), 0, 0) })
-            grid.addView(tile, GridLayout.LayoutParams().apply { width = dp(tileWidth); height = dp(155); setMargins(dp(6), dp(6), dp(6), dp(12)) })
+            grid.addView(tile, GridLayout.LayoutParams().apply { width = dp(tileWidth); height = dp(140); setMargins(dp(6), dp(6), dp(6), dp(12)) })
         }
         if (focused != null) grid.findViewWithTag<View>(focused)?.requestFocus()
         else if (!window.decorView.hasFocus()) grid.getChildAt(0)?.requestFocus()
