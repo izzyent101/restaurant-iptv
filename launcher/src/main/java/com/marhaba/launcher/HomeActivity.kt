@@ -125,7 +125,7 @@ class HomeActivity : Activity() {
         header.addView(TextClock(this).apply { format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 19f; setTextColor(white) }, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.CENTER_VERTICAL))
         root.addView(header, LinearLayout.LayoutParams(-1, dp(100)))
         val scroll = ScrollView(this).apply { isFillViewport = false; clipToPadding = false; setPadding(0, dp(12), 0, dp(8)) }
-        grid = GridLayout(this).apply { columnCount = 5; clipChildren = false; clipToPadding = false }
+        grid = GridLayout(this).apply { columnCount = 6; clipChildren = false; clipToPadding = false }
         scroll.addView(grid)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         val footer = LinearLayout(this).apply {
@@ -175,24 +175,24 @@ class HomeActivity : Activity() {
         grid.removeAllViews()
         val selected = apps().filter { it.pkg in favorites() || it.pkg == "com.restaurant.iptv" }
             .sortedBy { if (it.pkg == "com.restaurant.iptv") "" else it.name.lowercase() }
-        val tileWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density - 92) / 5).toInt() - 16
+        val tileWidth = 112
         selected.forEach { app ->
             val tile = LinearLayout(this).apply {
                 tag = app.pkg; orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-                isFocusable = true; isClickable = true; elevation = dp(8).toFloat(); setPadding(dp(12), dp(12), dp(12), dp(10))
+                isFocusable = true; isClickable = true; elevation = dp(8).toFloat(); setPadding(dp(10), dp(10), dp(10), dp(8))
                 background = glass()
             }
             val icon = ImageView(this).apply { setImageDrawable(packageManager.getApplicationIcon(app.pkg)); scaleType = ImageView.ScaleType.FIT_CENTER }
-            tile.addView(icon, LinearLayout.LayoutParams(dp(76), dp(76)))
-            tile.addView(text(if (app.pkg == "com.restaurant.iptv") "MMG TV" else app.name, 15f).apply {
-                gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; setPadding(0, dp(10), 0, 0)
-            }, LinearLayout.LayoutParams(-1, dp(35)))
+            tile.addView(icon, LinearLayout.LayoutParams(dp(60), dp(60)))
+            tile.addView(text(if (app.pkg == "com.restaurant.iptv") "MMG TV" else app.name, 13f).apply {
+                gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0)
+            }, LinearLayout.LayoutParams(-1, dp(28)))
             tile.setOnClickListener { launch(app.intent) }
             tile.setOnFocusChangeListener { _, hasFocus ->
                 tile.background = glass(hasFocus)
                 tile.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
             }
-            grid.addView(tile, GridLayout.LayoutParams().apply { width = dp(tileWidth); height = dp(136); setMargins(dp(8), dp(8), dp(8), dp(12)) })
+            grid.addView(tile, GridLayout.LayoutParams().apply { width = dp(tileWidth); height = dp(112); setMargins(dp(8), dp(8), dp(8), dp(12)) })
         }
         if (focused != null) grid.findViewWithTag<View>(focused)?.requestFocus()
         else if (!window.decorView.hasFocus()) grid.getChildAt(0)?.requestFocus()

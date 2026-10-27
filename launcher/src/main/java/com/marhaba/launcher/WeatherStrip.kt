@@ -67,21 +67,7 @@ class WeatherStrip(context: Context) : View(context) {
         c.restoreToCount(save)
         if (animate && isShown) postInvalidateDelayed(83)
     }
-    private var tickerOffset = 0f
-    private var lastFrame = 0L
-    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
-        if (!expanded && keyCode in listOf(android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
-            tickerOffset += if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) 210f else -210f
-            invalidate(); return true
-        }
-        return super.onKeyDown(keyCode, event)
-    }
     private fun drawCompact(c: Canvas) {
-        val now = SystemClock.uptimeMillis()
-        if (animate && !hasFocus() && lastFrame != 0L) tickerOffset += (now-lastFrame).coerceAtMost(250) * .014f
-        lastFrame = now
-        val total = days.size * 210f
-        tickerOffset = ((tickerOffset % total) + total) % total
         val save = c.save(); c.scale(width / 868f, height / 48f)
         paint.style = Paint.Style.FILL
         paint.shader = LinearGradient(0f,0f,868f,48f,intArrayOf(Color.rgb(43,61,51),Color.rgb(22,37,30)),null,Shader.TileMode.CLAMP)
@@ -94,21 +80,18 @@ class WeatherStrip(context: Context) : View(context) {
             paint.textAlign=Paint.Align.LEFT;paint.textSize=size;paint.color=color
             c.drawText(value,x,y,paint)
         }
-        label("Minneapolis",15f,21f,11f)
-        label(if (hasFocus()) "◂  Browse · OK opens  ▸" else if (stamp.startsWith("Cached")) "Cached · NWS · °F" else "7-day forecast · NWS · °F",15f,36f,7f,Color.rgb(182,203,193))
-        paint.color=Color.argb(50,220,230,220);c.drawRect(147f,10f,148f,38f,paint)
-        val clip = c.save();c.clipRect(156f,2f,857f,46f)
-        val t=(now%120000)/1000f
-        for (copy in 0..1) days.forEachIndexed { i,day ->
-            val x = 160f + i * 210f - tickerOffset + copy*total
-            if (x+210 > 156 && x < 857) {
-                val iconSave=c.save();c.scale(.6f,.6f,x+20f,20f)
-                icon(c,x+20f,20f,day.condition,day.nightOnly,t+i*.4f);c.restoreToCount(iconSave)
-                label("${day.label}   ${day.high?.let { "$it°" } ?: "—"} / ${day.low?.let { "$it°" } ?: "—"}",x+43f,20f,11f)
-                label(shortLabel(day.condition),x+43f,35f,9f,Color.rgb(182,203,193))
-            }
+        label("Minneapolis",12f,21f,10f)
+        label(if (stamp.startsWith("Cached")) "Cached · NWS · °F" else "7 days · NWS · °F",12f,34f,7f,Color.rgb(182,203,193))
+        val t=(SystemClock.uptimeMillis()%120000)/1000f
+        days.forEachIndexed { i,day ->
+            val x=109f+i*107f
+            paint.color=Color.argb(35,220,230,220);c.drawRect(x-5f,10f,x-4.5f,38f,paint)
+            val iconSave=c.save();c.scale(.58f,.58f,x+14f,20f)
+            icon(c,x+14f,20f,day.condition,day.nightOnly,t+i*.4f);c.restoreToCount(iconSave)
+            label(day.label,x+34f,18f,8f,Color.rgb(182,203,193))
+            label("${day.high?.let { "$it°" } ?: "—"} / ${day.low?.let { "$it°" } ?: "—"}",x+34f,34f,11f)
         }
-        c.restoreToCount(clip);c.restoreToCount(save)
+        c.restoreToCount(save)
         if (animate && isShown) postInvalidateDelayed(83)
     }
     private fun shortLabel(s: String): String {

@@ -54,7 +54,6 @@ class MarhabaBackdrop : Drawable() {
         palm(584f, 237f, .88f)
         palm(910f, 201f, 1.15f)
         paint.color = Color.argb(55, 208, 184, 121); paint.strokeWidth = .7f
-        canvas.drawLine(46f, 145f, 914f, 145f, paint)
         canvas.restoreToCount(save)
     }
     override fun setAlpha(alpha: Int) { paint.alpha = alpha }
