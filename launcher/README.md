@@ -38,3 +38,5 @@ At the owner's explicit request, remaining third-party applications except MMG T
 Version 1.0.8 replaces the compact weather strip with a 48dp bottom ticker. It scrolls seven forecast days, pauses on focus, supports left/right browsing and OK to expand. Back collapses. App tiles and weather remain visible when the controls auto-hide.
 
 Version 1.0.9 keeps all seven days simultaneously visible in the slim bottom bar; scrolling was removed at the owner's request. Weather icons remain animated and OK still expands details. The app tile is reduced to 112dp and the backdrop divider behind it is removed.
+
+Version 1.0.10 adds a vector seven-segment clock respecting 12/24-hour preference, top-left date, left-aligned controls, full-width scenery, palm sway, subtle solar glow and night star twinkle. Scenery refreshes at 8 fps only while the activity is resumed, and the clock once per second; both stop on pause. Reset backdrop paint opacity each frame to prevent stale alpha flattening the sky gradient.

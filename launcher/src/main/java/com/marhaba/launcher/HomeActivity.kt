@@ -47,6 +47,7 @@ class HomeActivity : Activity() {
     }
     override fun onUserInteraction() { super.onUserInteraction(); resetControls() }
     private lateinit var weather: WeatherStrip
+    private lateinit var clock: DigitalClock
     private val backdrop = MarhabaBackdrop()
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -54,6 +55,13 @@ class HomeActivity : Activity() {
     private var active = false
     private var lastAttempt = 0L
     private var failedWeather = false
+    private val sceneryFrame = object : Runnable {
+        override fun run() {
+            if (!active) return
+            backdrop.invalidateSelf()
+            handler.postDelayed(this, 125)
+        }
+    }
     private val tick = object : Runnable {
         override fun run() {
             if (!active) return
@@ -122,7 +130,15 @@ class HomeActivity : Activity() {
             setImageResource(R.drawable.marhaba_logo); scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = "Marhaba Grill"
         }, FrameLayout.LayoutParams(dp(145), dp(90), Gravity.CENTER))
-        header.addView(TextClock(this).apply { format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 19f; setTextColor(white) }, FrameLayout.LayoutParams(-2, -2, Gravity.RIGHT or Gravity.CENTER_VERTICAL))
+        header.addView(TextClock(this).apply {
+            format12Hour = "EEEE\nMMM d, yyyy"; format24Hour = "EEEE\nMMM d, yyyy"
+            textSize = 18f; setTextColor(white)
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setLineSpacing(dp(5).toFloat(), 1f)
+            setShadowLayer(dp(3).toFloat(), 0f, 1f, Color.BLACK)
+        }, FrameLayout.LayoutParams(-2, -2, Gravity.LEFT or Gravity.CENTER_VERTICAL))
+        clock = DigitalClock(this)
+        header.addView(clock, FrameLayout.LayoutParams(dp(190), dp(64), Gravity.RIGHT or Gravity.CENTER_VERTICAL))
         root.addView(header, LinearLayout.LayoutParams(-1, dp(100)))
         val scroll = ScrollView(this).apply { isFillViewport = false; clipToPadding = false; setPadding(0, dp(12), 0, dp(8)) }
         grid = GridLayout(this).apply { columnCount = 6; clipChildren = false; clipToPadding = false }
@@ -155,12 +171,12 @@ class HomeActivity : Activity() {
             setOnClickListener { toggleWeather() }
             setOnFocusChangeListener { _, _ -> invalidate() }
         }
-        root.addView(footer, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(10) })
+        root.addView(footer, LinearLayout.LayoutParams(-2, -2).apply { gravity = Gravity.LEFT; bottomMargin = dp(10) })
         root.addView(weather, LinearLayout.LayoutParams(-1, dp(48)))
         setContentView(root)
     }
-    override fun onResume() { super.onResume(); render(); active = true; weather.setActive(true); handler.post(tick); resetControls() }
-    override fun onPause() { active = false; handler.removeCallbacks(hideControls); weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
+    override fun onResume() { super.onResume(); render(); active = true; clock.setActive(true); handler.post(sceneryFrame); weather.setActive(true); handler.post(tick); resetControls() }
+    override fun onPause() { active = false; clock.setActive(false); handler.removeCallbacks(sceneryFrame); handler.removeCallbacks(hideControls); weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
     override fun onDestroy() { handler.removeCallbacksAndMessages(null); worker.shutdownNow(); super.onDestroy() }
     private fun apps(): List<App> {
         val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
