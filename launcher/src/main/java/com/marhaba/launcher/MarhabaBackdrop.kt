@@ -9,15 +9,28 @@ class MarhabaBackdrop : Drawable() {
     override fun draw(canvas: Canvas) {
         val save = canvas.save()
         canvas.scale(bounds.width() / 960f, bounds.height() / 540f)
+        val phase = Daylight.phase()
+        val night = phase == "night"
+        val sky = when (phase) {
+            "sunrise" -> Color.rgb(148, 97, 73)
+            "sunset" -> Color.rgb(150, 67, 47)
+            "day" -> Color.rgb(77, 135, 139)
+            else -> Color.rgb(23, 33, 64)
+        }
         paint.style = Paint.Style.FILL
-        paint.shader = LinearGradient(0f, 0f, 960f, 540f, intArrayOf(Color.rgb(12, 25, 23), Color.rgb(18, 34, 28), Color.rgb(42, 44, 29)), null, Shader.TileMode.CLAMP)
+        paint.shader = LinearGradient(0f, 0f, 960f, 540f, intArrayOf(Color.rgb(12, 25, 23), Color.rgb(18, 34, 28), sky), null, Shader.TileMode.CLAMP)
         canvas.drawRect(0f, 0f, 960f, 540f, paint)
         paint.shader = null
         // A restrained gold sun behind the desert skyline.
-        paint.color = Color.rgb(61, 62, 37)
-        canvas.drawCircle(753f, 230f, 85f, paint)
+        paint.color = if (night) Color.rgb(220, 224, 206) else if (phase == "day") Color.rgb(235, 210, 141) else Color.rgb(223, 144, 88)
+        val sunY = if (phase == "sunrise" || phase == "sunset") 330f else 230f
+        canvas.drawCircle(753f, sunY, if (night) 36f else 65f, paint)
+        if (night) {
+            paint.color = Color.argb(190, 229, 232, 216)
+            for (i in 0..28) canvas.drawCircle(490f + (i * 79 % 440), 100f + (i * 43 % 190), if (i % 3 == 0) 1.3f else .7f, paint)
+        }
         fun shape(color: Int, block: Path.() -> Unit) {
-            paint.style = Paint.Style.FILL; paint.color = color
+            paint.style = Paint.Style.FILL; paint.color = if (night) Color.rgb(Color.red(color)*2/3, Color.green(color)*2/3, Color.blue(color)*3/4) else color
             canvas.drawPath(Path().apply(block), paint)
         }
         shape(Color.rgb(88, 78, 48)) { moveTo(558f, 414f); lineTo(707f, 239f); lineTo(806f, 414f); close() }
@@ -41,7 +54,7 @@ class MarhabaBackdrop : Drawable() {
         palm(584f, 237f, .88f)
         palm(910f, 201f, 1.15f)
         paint.color = Color.argb(55, 208, 184, 121); paint.strokeWidth = .7f
-        canvas.drawLine(46f, 77f, 914f, 77f, paint)
+        canvas.drawLine(46f, 145f, 914f, 145f, paint)
         canvas.restoreToCount(save)
     }
     override fun setAlpha(alpha: Int) { paint.alpha = alpha }
