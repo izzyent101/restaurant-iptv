@@ -150,7 +150,6 @@ class MainActivity : AppCompatActivity() {
 
         requestNotifPermissionIfNeeded()
         promptAutostartPermissionIfNeeded()
-        PlaybackService.start(this)
         bindService(Intent(this, PlaybackService::class.java), connection, Context.BIND_AUTO_CREATE)
 
         observeStatus()
@@ -165,6 +164,17 @@ class MainActivity : AppCompatActivity() {
         // onCreate already loads; without this guard every launch did the whole
         // channel/category rebuild twice.
         if (android.os.SystemClock.uptimeMillis() - lastLoadAt > 1_500) loadData()
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        // Wait until Android/TCL recognizes the activity as foreground.
+        ui.postDelayed({
+            if (!isFinishing && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+                PlaybackService.start(this)
+                com.restaurant.iptv.recovery.RecoveryService.arm(this)
+            }
+        }, 1000)
     }
 
     // ---------------- Data ----------------

@@ -1,6 +1,9 @@
 package com.restaurant.iptv.data
 
 import android.content.Context
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.CancellationException
 import com.restaurant.iptv.data.entity.ChannelEntity
 import com.restaurant.iptv.data.entity.HiddenGroupEntity
 import com.restaurant.iptv.data.entity.ProviderEntity
@@ -128,7 +131,13 @@ class Repository(context: Context) {
     // ---------- EPG ----------
 
     /** Fetch the XMLTV guide for a provider into the in-memory EpgStore. */
-    suspend fun refreshEpg(providerId: Long): Boolean {
+    suspend fun refreshEpg(providerId: Long): Boolean = epgLock.withLock {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - (epgLoadedAt[providerId] ?: -60_000L) < 60_000L && EpgStore.channelsWithData(providerId) > 0) return@withLock true
+        refreshEpgLocked(providerId).also { if (it) epgLoadedAt[providerId] = android.os.SystemClock.elapsedRealtime() }
+    }
+
+    private suspend fun refreshEpgLocked(providerId: Long): Boolean {
         val p = dao.getProvider(providerId) ?: return false
         val url = when (p.type) {
             "xtream" -> {
@@ -147,6 +156,11 @@ class Repository(context: Context) {
         } catch (t: Throwable) {
             false
         }
+    }
+
+    companion object {
+        private val epgLock = Mutex()
+        private val epgLoadedAt = mutableMapOf<Long, Long>()
     }
 
     private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8")

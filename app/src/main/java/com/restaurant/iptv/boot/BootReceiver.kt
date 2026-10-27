@@ -26,7 +26,6 @@ class BootReceiver : BroadcastReceiver() {
             "android.intent.action.QUICKBOOT_POWERON",
             "com.htc.intent.action.QUICKBOOT_POWERON" -> {
                 runCatching { recordBootAndMaybeProtect(context) }
-                runCatching { PlaybackService.start(context) }
                 runCatching {
                     context.startActivity(
                         Intent(context, MainActivity::class.java)

@@ -51,6 +51,7 @@ object EpgFetcher {
         val parser = Xml.newPullParser()
         parser.setInput(stream, null)
 
+        val timestamps = XmlTvTimestamps()
         var channel: String? = null
         var start = 0L
         var stop = 0L
@@ -69,8 +70,8 @@ object EpgFetcher {
                 XmlPullParser.START_TAG -> when (parser.name) {
                     "programme" -> {
                         channel = parser.getAttributeValue(null, "channel")
-                        start = parseTs(parser.getAttributeValue(null, "start"))
-                        stop = parseTs(parser.getAttributeValue(null, "stop"))
+                        start = timestamps.parse(parser.getAttributeValue(null, "start"))
+                        stop = timestamps.parse(parser.getAttributeValue(null, "stop"))
                         title = null
                         desc = null
                     }
@@ -110,21 +111,4 @@ object EpgFetcher {
 
     private const val MAX_PER_CHANNEL = 60
 
-    // XMLTV timestamps: "20240131235900 +0000" (offset optional).
-    private val fmtWithZone = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US)
-    private val fmtNoZone = SimpleDateFormat("yyyyMMddHHmmss", Locale.US)
-
-    private fun parseTs(raw: String?): Long {
-        if (raw.isNullOrBlank()) return 0L
-        val s = raw.trim()
-        return try {
-            if (s.length > 14 && (s.contains('+') || s.contains('-'))) {
-                fmtWithZone.parse(s.substring(0, 14) + " " + s.substring(14).trim())?.time ?: 0L
-            } else {
-                fmtNoZone.parse(s.substring(0, minOf(14, s.length)))?.time ?: 0L
-            }
-        } catch (e: Exception) {
-            0L
-        }
-    }
 }

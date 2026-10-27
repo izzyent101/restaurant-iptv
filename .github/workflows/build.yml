@@ -59,7 +59,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleDebug assembleRelease --stacktrace
+        run: ./gradlew assembleDebug assembleRelease :app:testReleaseUnitTest :app:lintRelease :launcher:testReleaseUnitTest --stacktrace
 
       - name: Upload APKs (artifact)
         uses: actions/upload-artifact@v4

@@ -39,6 +39,7 @@ import kotlinx.coroutines.withContext
  * Runs as a mediaPlayback foreground service so it survives the Activity
  * being torn down and keeps the CPU/Wi-Fi awake for 10+ hours unattended.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService : Service(), PlaybackCommands {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -74,10 +75,9 @@ class PlaybackService : Service(), PlaybackCommands {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        startForeground(NOTIF_ID, buildNotification("Starting…"))
         repo = Repository(applicationContext)
         prefs = Prefs(applicationContext)
-
-        startForeground(NOTIF_ID, buildNotification("Starting…"))
         acquireWakeLock()
         compat = kotlinx.coroutines.runBlocking {
             runCatching {
@@ -94,6 +94,12 @@ class PlaybackService : Service(), PlaybackCommands {
         buildPlayer()
         startWebServer()
         startWatchdog()
+        scope.launch {
+            while (true) {
+                com.restaurant.iptv.recovery.RecoveryService.pulse(this@PlaybackService)
+                delay(5_000)
+            }
+        }
 
         scope.launch { resumeLastOrIdle() }
         // Load the EPG on startup and keep it fresh. We only retain ~36h of
@@ -108,6 +114,8 @@ class PlaybackService : Service(), PlaybackCommands {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Reassert after the activity is visible: TCL can silently reject the early boot call.
+        startForeground(NOTIF_ID, buildNotification("Playback ready"))
         when (intent?.action) {
             ACTION_PLAY_CHANNEL -> {
                 val id = intent.getLongExtra(EXTRA_CHANNEL_ID, -1L)

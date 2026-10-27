@@ -76,6 +76,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     val media3 = "1.4.1"
     val ktor = "2.3.12"
     val room = "2.6.1"

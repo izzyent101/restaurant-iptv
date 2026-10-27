@@ -21,7 +21,9 @@ class App : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-        trimCacheIfOversized()
+        if (android.os.Build.VERSION.SDK_INT < 28 || !android.app.Application.getProcessName().endsWith(":recovery")) {
+            Thread({ trimCacheIfOversized() }, "cache-maintenance").start()
+        }
     }
 
     override fun newImageLoader(): ImageLoader =

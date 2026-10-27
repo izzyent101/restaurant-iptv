@@ -51,6 +51,9 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <service android:name=".recovery.RecoveryService" android:process=":recovery"
+            android:exported="false" android:foregroundServiceType="mediaPlayback" />
+
         <!-- Serves the downloaded APK to the system installer -->
         <provider
             android:name="androidx.core.content.FileProvider"
