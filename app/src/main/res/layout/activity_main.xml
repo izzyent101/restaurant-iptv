@@ -107,7 +107,7 @@
                 android:letterSpacing="0.12"
                 android:textAllCaps="true" />
 
-            <androidx.recyclerview.widget.RecyclerView
+            <com.restaurant.iptv.ui.TvChannelList
                 android:id="@+id/categoryList"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -155,7 +155,7 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
+            <com.restaurant.iptv.ui.TvChannelList
                 android:id="@+id/channelList"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"

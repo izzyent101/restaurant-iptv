@@ -19,10 +19,25 @@ class RichChannelAdapter(
 
     private val items = ArrayList<ChannelUi>()
 
+    init { setHasStableIds(true) }
+
+    override fun getItemId(position: Int): Long = items[position].channel.id
+
     fun submit(list: List<ChannelUi>) {
-        items.clear()
-        items.addAll(list)
-        notifyDataSetChanged()
+        if (items == list) return
+        // Guide/favorite refreshes keep row views and focus in place.
+        if (items.size == list.size && items.indices.all { items[it].channel.id == list[it].channel.id }) {
+            for (i in items.indices) {
+                if (items[i] != list[i]) {
+                    items[i] = list[i]
+                    notifyItemChanged(i)
+                }
+            }
+        } else {
+            items.clear()
+            items.addAll(list)
+            notifyDataSetChanged()
+        }
     }
 
     fun itemAt(pos: Int): ChannelUi? = items.getOrNull(pos)

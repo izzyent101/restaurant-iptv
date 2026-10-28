@@ -28,9 +28,11 @@ class CategoryAdapter(
     override fun getItemId(position: Int): Long = items[position].hashCode().toLong()
 
     fun submit(list: List<String>) {
+        if (items == list) return
+        val selected = current()
         items.clear()
         items.addAll(list)
-        if (selectedIndex >= items.size) selectedIndex = 0
+        selectedIndex = items.indexOf(selected).coerceAtLeast(0)
         notifyDataSetChanged()
     }
 

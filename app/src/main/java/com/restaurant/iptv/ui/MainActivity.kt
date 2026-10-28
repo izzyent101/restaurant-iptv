@@ -122,6 +122,7 @@ class MainActivity : AppCompatActivity() {
             // (heavy) channel list once focus settles for ~180ms. Keeps scroll smooth.
             pendingCategory = name
             binding.channelHeader.text = name
+            ++categoryGen // Invalidate a previous build immediately, before debounce.
             ui.removeCallbacks(categorySwitch)
             ui.postDelayed(categorySwitch, 180)
         }
@@ -211,16 +212,9 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { repo.refreshEpg(providerId) }.getOrDefault(false) }
             if (ok && this@MainActivity.providerId == providerId) {
-                if (browserOpen()) {
-                    // Refresh rows without stealing the user's place mid-browse.
-                    val prev = focusedRowPos(binding.channelList)
-                    val inChannels = prev >= 0
-                    showCategory(categoryAdapter.current() ?: CAT_ALL) {
-                        if (inChannels) binding.channelList.post { focusRow(binding.channelList, prev) }
-                    }
-                } else {
-                    showCategory(categoryAdapter.current() ?: CAT_ALL)
-                }
+                // Stable row IDs preserve the user's current focus, including
+                // navigation performed while the guide was loading.
+                showCategory(categoryAdapter.current() ?: CAT_ALL)
             }
         }
     }
@@ -379,6 +373,7 @@ class MainActivity : AppCompatActivity() {
     private fun hideBrowser() {
         ui.removeCallbacks(categorySwitch)
         pendingCategory = null
+        ++categoryGen
         binding.browserPanel.visibility = View.GONE
         binding.categoryColumn.visibility = View.GONE
     }
@@ -504,6 +499,16 @@ class MainActivity : AppCompatActivity() {
         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER
     )
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // Activity.onKeyDown runs after View focus search. Route column changes
+        // first so Android cannot enter a stale list while a category is loading.
+        if (browserOpen() && event.keyCode in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            if (event.action == KeyEvent.ACTION_DOWN) onKeyDown(event.keyCode, event)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val open = browserOpen()
         val hist = historyOpen()
@@ -577,7 +582,19 @@ class MainActivity : AppCompatActivity() {
                     if (n > 0 && focusedRowPos(binding.historyList) == n - 1) return true
                     return super.onKeyDown(keyCode, event)
                 }
-                binding.categoryList.hasFocus() -> { focusRow(binding.channelList, 0); return true }
+                binding.categoryList.hasFocus() -> {
+                    ui.removeCallbacks(categorySwitch)
+                    pendingCategory = null
+                    showCategory(categoryAdapter.current() ?: CAT_ALL) {
+                        binding.channelList.post {
+                            if (browserOpen() && binding.categoryList.hasFocus()) {
+                                val pos = focusedChannel?.let { channelAdapter.positionOf(it.channel.id) } ?: -1
+                                focusRow(binding.channelList, pos.coerceAtLeast(0))
+                            }
+                        }
+                    }
+                    return true
+                }
             }
             // Hard stop at the top/bottom of the lists — reaching an end must NOT
             // leap focus to another column or wrap around.

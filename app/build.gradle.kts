@@ -60,6 +60,8 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions { unitTests.isIncludeAndroidResources = true }
+
     buildFeatures {
         viewBinding = true
         buildConfig = true
@@ -77,6 +79,7 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.14.1")
     val media3 = "1.4.1"
     val ktor = "2.3.12"
     val room = "2.6.1"
