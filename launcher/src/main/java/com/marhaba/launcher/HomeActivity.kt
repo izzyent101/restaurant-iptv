@@ -1,7 +1,6 @@
 package com.marhaba.launcher
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -125,7 +124,7 @@ class HomeActivity : Activity() {
         cornerRadius = dp(22).toFloat()
         setStroke(dp(1), if (focused) Color.argb(220, 239, 240, 222) else Color.argb(60, 221, 234, 222))
     }
-    private fun styleDialog(dialog: AlertDialog) {
+    private fun styleDialog(dialog: android.app.Dialog) {
         dialogOpen = true
         handler.removeCallbacks(hideControls)
         dialog.setOnDismissListener { dialogOpen = false; resetControls() }
@@ -188,7 +187,7 @@ class HomeActivity : Activity() {
         }
         action("Apps") { showApps(false) }
         action("Favorites") { showApps(true) }
-        action("Settings") { launch(Intent(Settings.ACTION_SETTINGS)) }
+        action("Settings") { showSettings() }
         weather = WeatherStrip(this).apply {
             isFocusable = true; isClickable = true
             setOnClickListener { toggleWeather() }
@@ -201,6 +200,25 @@ class HomeActivity : Activity() {
     override fun onResume() { super.onResume(); render(); active = true; clock.setActive(true); handler.post(sceneryFrame); weather.setActive(true); handler.post(tick); resetControls(); scheduleBootLaunch() }
     override fun onPause() { handler.removeCallbacks(bootLaunch); active = false; clock.setActive(false); handler.removeCallbacks(sceneryFrame); handler.removeCallbacks(hideControls); weather.setActive(false); handler.removeCallbacks(tick); super.onPause() }
     override fun onDestroy() { handler.removeCallbacksAndMessages(null); worker.shutdownNow(); super.onDestroy() }
+    private fun showSettings() {
+        if (!android.os.Build.MANUFACTURER.equals("Amazon", ignoreCase = true)) {
+            launch(Intent(Settings.ACTION_SETTINGS)); return
+        }
+        // Fire's general settings entry belongs to Amazon Home, which may be disabled.
+        val destinations = listOf(
+            "Network" to "network.NetworkActivity",
+            "Display and sound" to "display_sounds.DisplayAndSoundsActivity",
+            "Remotes and Bluetooth" to "controllers_bluetooth_devices.ControllersAndBluetoothActivity",
+            "Applications" to "applications.ApplicationsActivity",
+            "Preferences" to "preferences.PreferencesActivity",
+            "My Fire TV" to "device.DeviceActivity"
+        )
+        showPicker("Settings", destinations.map { it.first }) { index ->
+            launch(Intent().setClassName("com.amazon.tv.settings.v2",
+                "com.amazon.tv.settings.v2.tv.${destinations[index].second}"))
+        }
+    }
+
     private fun apps(): List<App> {
         val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
         return packageManager.queryIntentActivities(query, 0).filter { it.activityInfo.packageName != packageName }
@@ -208,12 +226,32 @@ class HomeActivity : Activity() {
                 Intent(Intent.ACTION_MAIN).setClassName(it.activityInfo.packageName, it.activityInfo.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             .distinctBy { it.pkg }.sortedBy { it.name.lowercase() }
     }
-    private fun favorites() = prefs.getStringSet("favorites", setOf("com.restaurant.iptv"))!!.toSet()
+    private fun homeOrder(): List<String> {
+        val saved = prefs.getString("homeOrder", null)
+        if (saved != null) return runCatching {
+            val array = org.json.JSONArray(saved)
+            (0 until array.length()).map { array.getString(it) }.distinct()
+        }.getOrDefault(emptyList())
+        return prefs.getStringSet("favorites", setOf("com.restaurant.iptv"))!!.sortedBy {
+            if (it == "com.restaurant.iptv") "" else it
+        }
+    }
+    private fun saveHomeOrder(order: List<String>) {
+        prefs.edit().putString("homeOrder", org.json.JSONArray(order.distinct()).toString()).apply()
+    }
+    private fun favorites() = homeOrder().toSet()
     private fun render() {
         val focused = grid.findFocus()?.tag
         grid.removeAllViews()
-        val selected = apps().filter { it.pkg in favorites() || it.pkg == "com.restaurant.iptv" }
-            .sortedBy { if (it.pkg == "com.restaurant.iptv") "" else it.name.lowercase() }
+        val installed = apps().associateBy { it.pkg }
+        val selected = homeOrder().mapNotNull { installed[it] }
+        if (selected.isEmpty()) {
+            val add = Button(this).apply {
+                text = "Add apps to Home"; isAllCaps = false; setTextColor(white)
+                background = glass(); setOnClickListener { showApps(true) }
+            }
+            grid.addView(add, GridLayout.LayoutParams().apply { width = dp(240); height = dp(64) })
+        }
         val tileWidth = 112
         selected.forEach { app ->
             val tile = LinearLayout(this).apply {
@@ -226,7 +264,15 @@ class HomeActivity : Activity() {
             tile.addView(text(if (app.pkg == "com.restaurant.iptv") "MMG TV" else app.name, 13f).apply {
                 gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; setPadding(0, dp(6), 0, 0)
             }, LinearLayout.LayoutParams(-1, dp(28)))
+            tile.contentDescription = "${app.name}. Hold OK or press Menu for options."
             tile.setOnClickListener { launch(app.intent) }
+            tile.setOnLongClickListener { showAppMenu(app); true }
+            tile.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_MENU) {
+                    if (event.action == android.view.KeyEvent.ACTION_UP) showAppMenu(app)
+                    true
+                } else false
+            }
             tile.setOnFocusChangeListener { _, hasFocus ->
                 tile.background = glass(hasFocus)
                 tile.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
@@ -236,19 +282,119 @@ class HomeActivity : Activity() {
         if (focused != null) grid.findViewWithTag<View>(focused)?.requestFocus()
         else if (!window.decorView.hasFocus()) grid.getChildAt(0)?.requestFocus()
     }
+    private fun showPicker(title: String, labels: List<String>, selected: Set<Int>? = null,
+                           save: ((Set<Int>) -> Unit)? = null, choose: (Int) -> Unit = {}) {
+        cancelBootLaunch()
+        val dialog = android.app.Dialog(this)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(20), dp(24), dp(20))
+        }
+        panel.addView(text(title, 24f).apply { setPadding(0, 0, 0, dp(14)) })
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val checked = selected?.toMutableSet() ?: mutableSetOf()
+        labels.forEachIndexed { index, label ->
+            val row: TextView = if (selected != null) CheckBox(this).apply {
+                text = label; isChecked = index in checked
+                setOnCheckedChangeListener { _, value -> if (value) checked.add(index) else checked.remove(index) }
+            } else Button(this).apply {
+                text = label; isAllCaps = false
+                setOnClickListener { dialog.dismiss(); choose(index) }
+            }
+            row.textSize = 16f; row.setTextColor(white); row.background = glass()
+            row.setPadding(dp(12), 0, dp(12), 0)
+            row.setOnFocusChangeListener { _, focused -> row.background = glass(focused) }
+            list.addView(row, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(6) })
+        }
+        panel.addView(ScrollView(this).apply { addView(list); isFillViewport = false },
+            LinearLayout.LayoutParams(-1, dp(minOf(250, labels.size * 54))))
+        val actions = LinearLayout(this).apply { gravity = Gravity.RIGHT }
+        fun button(label: String, action: () -> Unit) {
+            actions.addView(Button(this).apply {
+                text = label; isAllCaps = false; setTextColor(white); background = glass()
+                setOnFocusChangeListener { _, focused -> background = glass(focused) }
+                setOnClickListener { dialog.dismiss(); action() }
+            }, LinearLayout.LayoutParams(dp(120), dp(46)).apply { marginStart = dp(8) })
+        }
+        button(if (selected == null) "Close" else "Cancel") {}
+        if (selected != null) button("Save") { save?.invoke(checked) }
+        panel.addView(actions, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
+        dialog.setContentView(panel); styleDialog(dialog)
+        dialog.window?.setLayout(dp(480), -2)
+        list.getChildAt(0)?.requestFocus()
+    }
     private fun showApps(edit: Boolean) {
         val all = apps()
-        if (!edit) {
-            styleDialog(AlertDialog.Builder(this).setTitle("All apps").setItems(all.map { it.name }.toTypedArray()) { _, index -> launch(all[index].intent) }.setNegativeButton("Close", null).create())
-        } else {
-            val chosen = favorites().toMutableSet()
-            styleDialog(AlertDialog.Builder(this).setTitle("Favorites")
-                .setMultiChoiceItems(all.map { it.name }.toTypedArray(), all.map { it.pkg in chosen }.toBooleanArray()) { _, index, checked ->
-                    if (checked) chosen.add(all[index].pkg) else chosen.remove(all[index].pkg)
-                }.setPositiveButton("Save") { _, _ ->
-                    chosen.add("com.restaurant.iptv"); prefs.edit().putStringSet("favorites", chosen).apply(); render()
-                }.setNegativeButton("Cancel", null).create())
+        if (edit) {
+            showPicker("Favorites", all.map { it.name },
+                all.indices.filter { all[it].pkg in favorites() }.toSet(), save = { selected ->
+                    saveHomeOrder(HomeOrder.reconcile(homeOrder(), selected.map { all[it].pkg }.toSet()))
+                    render(); grid.getChildAt(0)?.requestFocus()
+                })
+        } else showPicker("All apps", all.map { it.name }) { launch(all[it].intent) }
+    }
+    private fun showAppMenu(app: App, reorder: Boolean = false) {
+        cancelBootLaunch()
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(dp(24), dp(22), dp(24), dp(20))
         }
+        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        header.addView(ImageView(this).apply {
+            setImageDrawable(packageManager.getApplicationIcon(app.pkg))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }, LinearLayout.LayoutParams(dp(64), dp(64)).apply { marginEnd = dp(18) })
+        val title = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        title.addView(text(if (app.pkg == "com.restaurant.iptv") "MMG TV" else app.name, 24f).apply {
+            maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+            setTypeface(typeface, Typeface.BOLD)
+        })
+        title.addView(text(if (reorder) "Reorder on Home" else "App options", 13f, muted).apply { setPadding(0, dp(5), 0, 0) })
+        header.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
+        panel.addView(header, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(18) })
+        val dialog = android.app.Dialog(this).apply {
+            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+            setContentView(panel)
+        }
+        var firstAction: View? = null
+        fun row(label: String, enabled: Boolean = true, action: () -> Unit) {
+            val button = Button(this).apply {
+                text = label; textSize = 16f; isAllCaps = false; gravity = Gravity.CENTER_VERTICAL or Gravity.LEFT
+                setPadding(dp(18), 0, dp(18), 0); setTextColor(if (enabled) white else muted)
+                isEnabled = enabled; alpha = if (enabled) 1f else .4f
+                background = glass()
+                setOnFocusChangeListener { _, focused -> background = glass(focused) }
+                setOnClickListener { dialog.dismiss(); action() }
+            }
+            panel.addView(button, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(8) })
+            if (enabled && firstAction == null) firstAction = button
+        }
+        if (reorder) {
+            val installed = apps().map { it.pkg }.toSet()
+            val visible = homeOrder().filter { it in installed }
+            val index = visible.indexOf(app.pkg)
+            fun move(delta: Int) {
+                saveHomeOrder(HomeOrder.move(homeOrder(), app.pkg, delta, installed)); render()
+                grid.findViewWithTag<View>(app.pkg)?.requestFocus()
+                showAppMenu(app, true)
+            }
+            row("Move left", index > 0) { move(-1) }
+            row("Move right", index >= 0 && index < visible.lastIndex) { move(1) }
+            row("Done") { grid.findViewWithTag<View>(app.pkg)?.requestFocus() }
+            panel.addView(text("Position ${index + 1} of ${visible.size}", 13f, muted))
+        } else {
+            row("Open") { launch(app.intent) }
+            row("Reorder", homeOrder().count { key -> apps().any { it.pkg == key } } > 1) { showAppMenu(app, true) }
+            row("Remove from Home") {
+                saveHomeOrder(homeOrder().filterNot { it == app.pkg }); render()
+                grid.getChildAt(0)?.requestFocus()
+                Toast.makeText(this, "Removed from Home. Still available in Apps and Favorites.", Toast.LENGTH_LONG).show()
+            }
+            row("App info") { launch(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${app.pkg}"))) }
+            panel.addView(text("Removing from Home keeps the app installed.", 12f, muted))
+        }
+        styleDialog(dialog)
+        dialog.window?.setLayout(dp(420), -2)
+        firstAction?.requestFocus()
     }
     private fun launch(intent: Intent) {
         try { startActivity(intent) } catch (_: Exception) { Toast.makeText(this, "This app is unavailable. Try TV settings.", Toast.LENGTH_LONG).show() }
